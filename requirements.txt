@@ -11,3 +11,6 @@ autogen_core
 autogen_ext
 autogen-ext[openai]
 python-dotenv
+dnspython
+markdown 
+pdfkit
