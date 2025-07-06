@@ -1,5 +1,5 @@
 import subprocess
-# ...existing code...
+from . import util
 
 def nmap_scan(target: str, options: str = "-F", timeout: int = 240) -> str:
     """
@@ -14,6 +14,8 @@ def nmap_scan(target: str, options: str = "-F", timeout: int = 240) -> str:
         str: The output of the nmap command.
     """
     try:
+        util.log_text(f"Running nmap with options: {options} on target: {target}")
+        
         result = subprocess.run(
             ["nmap"] + options.split() + [target],
             stdout=subprocess.PIPE,
@@ -22,8 +24,11 @@ def nmap_scan(target: str, options: str = "-F", timeout: int = 240) -> str:
             timeout=timeout
         )
         if result.returncode == 0:
+            util.log_text(f"nmap output: {result.stdout} \n------\n")
             return result.stdout
         else:
+            util.log_text(f"nmap failed with error: {result.stderr} \n------\n")
             return f"nmap failed: {result.stderr}"
     except Exception as e:
+        util.log_text(f"Error running nmap: {str(e)}")
         return f"Error running nmap: {e}"

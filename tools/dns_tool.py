@@ -1,4 +1,5 @@
 import dns.resolver
+from . import util
 
 def dns_lookup(host: str) -> dict:
     """
@@ -10,6 +11,7 @@ def dns_lookup(host: str) -> dict:
     """
     result = {"ip_addresses": [], "email_host": None}
     try:
+        util.log_text(f"Performing DNS lookup for host: {host}")
         # Lookup A records (IP addresses)
         answers = dns.resolver.resolve(host, 'A')
         result["ip_addresses"] = [rdata.address for rdata in answers]
@@ -33,4 +35,5 @@ def dns_lookup(host: str) -> dict:
     except Exception:
         result["email_host"] = None
 
+    util.log_text(f"DNS lookup result for {host}: {result} \n------\n")
     return result

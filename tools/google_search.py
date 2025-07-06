@@ -1,3 +1,5 @@
+from . import util
+
 def google_search(query: str, num_results: int = 2, max_chars: int = 500) -> list:  # type: ignore[type-arg]
     import requests
     from bs4 import BeautifulSoup
@@ -24,6 +26,7 @@ def google_search(query: str, num_results: int = 2, max_chars: int = 500) -> lis
 
     def get_page_content(url: str) -> str:
         try:
+            util.log_text(f"Fetching content from {url}, num_results: {num_results}, max_chars: {max_chars}")
             response = requests.get(url, timeout=10)
             soup = BeautifulSoup(response.content, "html.parser")
             text = soup.get_text(separator=" ", strip=True)
@@ -33,9 +36,12 @@ def google_search(query: str, num_results: int = 2, max_chars: int = 500) -> lis
                 if len(content) + len(word) + 1 > max_chars:
                     break
                 content += " " + word
+
+            util.log_text(f"Fetched content length: {len(content)} characters, content: {content[:100]}... /n------\n")
             return content.strip()
         except Exception as e:
             print(f"Error fetching {url}: {str(e)}")
+            util.log_text(f"Error fetching {url}: {str(e)}")
             return ""
 
     enriched_results = []

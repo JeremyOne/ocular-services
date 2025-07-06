@@ -26,3 +26,7 @@ sudo apt update -y
 sudo apt install ./docker-desktop-<version>-<arch>.deb
 
 sudo usermod -aG kvm $USER
+
+#Docker
+sudo systemctl status docker
+sudo service docker start

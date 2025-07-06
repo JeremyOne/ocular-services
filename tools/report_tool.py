@@ -3,7 +3,7 @@ import time
 import markdown
 import pdfkit
 
-def write_report_to_markdown(content: str, hostname: str) -> str:
+def write_report(content: str, hostname: str) -> str:
     """
     Writes the provided content to a markdown file.
     Args:

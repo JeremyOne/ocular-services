@@ -1,0 +1,1 @@
+python3 research.py "Research in detail 192.168.0.9"

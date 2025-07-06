@@ -18,7 +18,9 @@ Thumbs.db
 
 # Logs
 *.log
-reports/*
+reports/*.pdf
+reports/*.md
+reports/*.html
 
 # Local tools output
 *.out
