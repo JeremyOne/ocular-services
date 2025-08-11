@@ -7,7 +7,10 @@ pip install --upgrade -r requirements.txt
 
 
 # required tools
-nmap
+nmap (apt)
+enum4linux (snap)
+smbclient (apt)
+nikto (apt)
 
 https://docs.docker.com/desktop/setup/install/linux/ubuntu/
 java 17+ - sudo apt install openjdk-21-jre-headless

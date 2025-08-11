@@ -1,6 +1,9 @@
 import threading
 from datetime import datetime
 
+_log_file_lock = threading.Lock()
+_log_file_path = None
+
 def load_template(template_path: str = "reports/template.md") -> str:
     """
     Loads the text template file into a string variable.
@@ -16,9 +19,6 @@ def load_template(template_path: str = "reports/template.md") -> str:
         return f"Error loading template: {e}"
 
 
-_log_file_lock = threading.Lock()
-_log_file_path = None
-
 def log_text(text: str, log_file: str = None) -> None:
     """
     Logs the given text to a singleton log file.
@@ -26,10 +26,11 @@ def log_text(text: str, log_file: str = None) -> None:
         text (str): The text to log.
         log_file (str, optional): Path to the log file. Defaults to singleton file.
     """
+    global _log_file_path
 
     if _log_file_path is None:
-        global _log_file_path
-        _log_file_path = f"ocular_{datetime.now().strftime('%Y%m%d-%H%M%S')}.log"
+        _log_file_path = f"reports/ocular_{datetime.now().strftime('%Y%m%d-%H%M%S')}.log"
+
 
     path = log_file if log_file else _log_file_path
     with _log_file_lock:
