@@ -18,7 +18,7 @@ def curl_test(url: str, options: str = "-I") -> str:
         # -v: Verbose output (shows request/response)
         # --http2: Test HTTP/2 support
         # --trace-ascii: Detailed trace
-        util.log_text(f"Running curl with options: {options} on URL: {url}")
+        util.log_text(f"Running curl with options: '{options}' on URL: '{url}'")
 
         result = subprocess.run(
             ["curl"] + options.split() + [url],

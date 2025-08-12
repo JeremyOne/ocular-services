@@ -20,9 +20,9 @@ def write_report(content: str, hostname: str) -> str:
         f.write(content)
 
     # Also convert the markdown to PDF 
-    markdown_export(filename)
+    # markdown_export(filename)
 
-    return f"Report written to {os.path.abspath(filename)}"
+    return f"Report written to '{os.path.abspath(filename)}'"
 
 
 

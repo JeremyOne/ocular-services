@@ -11,7 +11,7 @@ def ping_host(host: str, count: int = 4) -> str:
         str: The output of the ping command.
     """
     try:
-        util.log_text(f"Pinging host: {host} with count: {count}")
+        util.log_text(f"Pinging host: '{host}' with count: {count}")
         result = subprocess.run(
             ["ping", "-c", str(count), host],
             stdout=subprocess.PIPE,

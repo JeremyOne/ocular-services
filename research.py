@@ -193,7 +193,22 @@ async def main():
 
     task = sys.argv[1]
     stream = team.run_stream(task=task)
-    await Console(stream)
+    
+    # Create a custom handler to log messages while displaying them
+    async def log_and_display():
+        async for message in stream:
+            # Log the message
+            if hasattr(message, 'source') and hasattr(message, 'content'):
+                log_text(f"[{message.source}]: {message.content}")
+            elif hasattr(message, 'content'):
+                log_text(f"[MESSAGE]: {message.content}")
+            else:
+                log_text(f"[STREAM]: {str(message)}")
+            
+            # Yield the message for console display
+            yield message
+    
+    await Console(log_and_display())
     await model_client.close()
     
 

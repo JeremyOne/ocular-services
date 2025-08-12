@@ -10,7 +10,7 @@ def enum4linux_scan(target: str, options: str = "-a") -> str:
     Returns:
         str: The output of the enum4linux command.
     """
-    util.log_text(f"enum4linux_scan called with target={target}, options={options}")
+    util.log_text(f"enum4linux_scan called with target: '{target}', options: '{options}'")
     try:
         cmd = ["enum4linux"] + options.split() + [target]
         result = subprocess.run(

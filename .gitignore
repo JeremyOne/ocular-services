@@ -21,6 +21,7 @@ Thumbs.db
 reports/*.pdf
 reports/*.md
 reports/*.html
+reports-*
 
 # Local tools output
 *.out

@@ -14,7 +14,7 @@ def nmap_scan(target: str, options: str = "-F", timeout: int = 240) -> str:
         str: The output of the nmap command.
     """
     try:
-        util.log_text(f"Running nmap with options: {options} on target: {target}")
+        util.log_text(f"Running nmap with options: '{options}' on target: '{target}'")
         
         result = subprocess.run(
             ["nmap"] + options.split() + [target],

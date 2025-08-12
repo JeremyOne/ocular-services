@@ -10,7 +10,7 @@ def smbclient_scan(target: str, options: str = "-L") -> str:
     Returns:
         str: The output of the smbclient command.
     """
-    util.log_text(f"smbclient_scan called with target={target}, options={options}")
+    util.log_text(f"smbclient_scan called with target: '{target}', options: '{options}'")
     try:
         cmd = ["smbclient"] + options.split() + [target]
         result = subprocess.run(

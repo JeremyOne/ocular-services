@@ -10,7 +10,7 @@ def nikto_scan(target: str, options: str = "-h") -> str:
     Returns:
         str: The output of the nikto command.
     """
-    util.log_text(f"nikto_scan called with target={target}, options={options}")
+    util.log_text(f"nikto_scan called with target: '{target}', options: '{options}'")
     try:
         cmd = ["nikto"] + options.split() + [target]
         result = subprocess.run(

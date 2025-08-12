@@ -1,5 +1,6 @@
 import threading
 from datetime import datetime
+import os
 
 _log_file_lock = threading.Lock()
 _log_file_path = None
@@ -26,6 +27,11 @@ def log_text(text: str, log_file: str = None) -> None:
         text (str): The text to log.
         log_file (str, optional): Path to the log file. Defaults to singleton file.
     """
+
+    # Ensure the reports directory exists
+    reports_dir = "reports"
+    if not os.path.exists(reports_dir):
+        os.makedirs(reports_dir, exist_ok=True)
     global _log_file_path
 
     if _log_file_path is None:

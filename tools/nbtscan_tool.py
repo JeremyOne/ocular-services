@@ -10,7 +10,7 @@ def nbtscan_scan(target: str, options: str = "") -> str:
     Returns:
         str: The output of the nbtscan command.
     """
-    util.log_text(f"nbtscan_scan called with target={target}, options={options}")
+    util.log_text(f"nbtscan_scan called with target: '{target}', options: '{options}'")
     try:
         cmd = ["nbtscan"] + options.split() + [target]
         result = subprocess.run(
