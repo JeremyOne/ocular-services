@@ -1,19 +1,22 @@
 import subprocess
 from . import util
+from .enums import PingOptions
 
-def ping_host(host: str, count: int = 4) -> str:
+def ping_host(host: str, count: PingOptions = PingOptions.DEFAULT_COUNT) -> str:
     """
     Pings a host and returns the output.
     Args:
         host (str): The hostname or IP address to ping.
-        count (int): Number of echo requests to send.
+        count (PingOptions): Number of echo requests to send.
     Returns:
         str: The output of the ping command.
     """
     try:
-        util.log_text(f"Pinging host: '{host}' with count: {count}")
+        count_value = int(count.value)
+            
+        util.log_text(f"Pinging host: '{host}' with count: {count_value}")
         result = subprocess.run(
-            ["ping", "-c", str(count), host],
+            ["ping", "-c", str(count_value), host],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,

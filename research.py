@@ -21,6 +21,10 @@ from tools.nbtscan_tool import nbtscan_scan
 from tools.enum4linux_tool import enum4linux_scan
 from tools.nikto_tool import nikto_scan
 from tools.smbclient_tool import smbclient_scan
+from tools.enums import (
+    PingOptions, NmapOptions, CurlOptions, NbtscanOptions,
+    Enum4linuxOptions, NiktoOptions, SmbclientOptions, DnsRecordTypes
+)
 
 
 from dotenv import load_dotenv
@@ -33,21 +37,15 @@ load_dotenv()
 ping_tool = FunctionTool(
     ping_host,
     description="Ping a network host to check connectivity. " \
-    "Args: host (str), count (int, default 4)"
+    f"Args: host (str), count (PingOptions, default {PingOptions.DEFAULT_COUNT.name}). " \
+    f"Available options: {', '.join([f'{opt.name}: {opt.description}' for opt in PingOptions])}"
 )
 
 nmap_tool = FunctionTool(
     nmap_scan,
     description="Run an nmap scan on a target. " \
-    "Args: target (str), options (str, default '-F'), " \
-    "These options are available: " \
-    "   '-F' for a fast scan (this operation is cheap)." \
-    "   '-sV --top-ports 20' to scan the top 20 ports (this operation is cheap)." \
-    "   '-sS -Pn' for a stealth scan without pinging the host (this operation is cheap)." \
-    "   '-p 3389 --script rdp-* 192.168.0.9' to scan for RDP vulnerabilities." \
-    "   '-A -T4' for aggressive scan and OS detection (this operation is expensive)." \
-    "   '-sU' to scan for UDP ports (this operation is expensive)." \
-    "   '-Pn --script vuln' to scan for CVEs (this operation is expensive)."
+    f"Args: target (str), options (NmapOptions, default {NmapOptions.FAST_SCAN.name}). " \
+    f"Available options: {', '.join([f'{opt.name}: {opt.description}' for opt in NmapOptions])}"
 )
 
 write_report_tool = FunctionTool(
@@ -62,75 +60,45 @@ datetime_tool = FunctionTool(
 
 dns_lookup_tool = FunctionTool(
     dns_lookup,
-    description="Lookup a host's IP addresses and identify the email host from TXT records. Args: host (str). Returns a dict with 'ip_addresses' and 'email_host'."
+    description="Lookup DNS records for a host. " \
+    f"Args: host (str), record_types (Optional[List[DnsRecordTypes]], default A and TXT records). " \
+    f"Available record types: {', '.join([f'{opt.name}: {opt.description}' for opt in DnsRecordTypes])}"
 )
 
 curl_tool = FunctionTool(
     curl_test,
-    description="Make an HTTP request to a URL using curl-like options to get HTTP information for penetration testing and discovery. " \
-    "Args: url (str), method (str, default 'GET'), headers (dict, optional), data (str, optional), options (str, optional). " \
-    "Returns the response content and status code." \
-    "These options are available: " \
-    "   '-I' to fetch headers only. " \
-    "   '-L' to follow redirects. " \
-    "   '-v' for verbose output. " \
-    "   '--http2' to test HTTP/2 support. " \
-    "   '--trace-ascii <file>' for detailed trace output."
+    description="Make an HTTP request to a URL using curl for penetration testing and discovery. " \
+    f"Args: url (str), options (CurlOptions, default {CurlOptions.HEADERS_ONLY.name}). " \
+    f"Available options: {', '.join([f'{opt.name}: {opt.description}' for opt in CurlOptions])}"
 )
 
 # Tool registration example:
 nbtscan_tool = FunctionTool(
     nbtscan_scan,
-    description="Run nbtscan to enumerate NetBIOS information on a target. Args: target (str), options (str, optional). Returns the command output." \
-    "" \
-    "These options are available: " \
-    "   '-r' to scan a range of IPs (e.g., 192.168.1.1-254), " \
-    "   '-s' to scan a specific subnet (e.g., 192.168.1.0/24)" \
-    "   '-v' for verbose output, " \
-    "   '-d' to include domain information, " \
-    "   '-n' to skip NetBIOS name resolution, "
+    description="Run nbtscan to enumerate NetBIOS information on a target. " \
+    f"Args: target (str), options (Optional[NbtscanOptions]). " \
+    f"Available options: {', '.join([f'{opt.name}: {opt.description}' for opt in NbtscanOptions])}"
 )
 
 enum4linux_tool = FunctionTool(
     enum4linux_scan,
-    description="Run enum4linux to enumerate SMB/CIFS information on a target. Args: target (str), options (str, optional). Returns the command output." \
-    "These options are available: " \
-    "   '-a' for all enumeration (default), " \
-    "   '-U' to get userlist, " \
-    "   '-M' to get machine list, " \
-    "   '-S' to get sharelist, " \
-    "   '-P' to get password policy information, " \
-    "   '-G' to get group and member list, " \
-    "   '-d' to be detailed, " \
-    "   '-u user -p pass' to specify credentials"
+    description="Run enum4linux to enumerate SMB/CIFS information on a target. " \
+    f"Args: target (str), options (Enum4linuxOptions, default {Enum4linuxOptions.ALL_ENUMERATION.name}). " \
+    f"Available options: {', '.join([f'{opt.name}: {opt.description}' for opt in Enum4linuxOptions])}"
 )
 
 nikto_tool = FunctionTool(
     nikto_scan,
-    description="Run nikto web vulnerability scanner on a target. Args: target (str), options (str, optional). Returns the command output." \
-    "These options are available: " \
-    "   '-h' for host scan (default), " \
-    "   '-p' to specify port (e.g., '-p 80,443'), " \
-    "   '-ssl' to force SSL mode, " \
-    "   '-nossl' to disable SSL, " \
-    "   '-C all' to check all CGI dirs, " \
-    "   '-Tuning x' for specific tests (1=interesting files, 2=misconfiguration, 3=info disclosure, etc.), " \
-    "   '-Format htm' to output in HTML format, " \
-    "   '-o filename' to save output to file"
+    description="Run nikto web vulnerability scanner on a target. " \
+    f"Args: target (str), options (NiktoOptions, default {NiktoOptions.HOST_SCAN.name}). " \
+    f"Available options: {', '.join([f'{opt.name}: {opt.description}' for opt in NiktoOptions])}"
 )
 
 smbclient_tool = FunctionTool(
     smbclient_scan,
-    description="Run smbclient to interact with SMB/CIFS shares on a target. Args: target (str), options (str, optional). Returns the command output." \
-    "These options are available: " \
-    "   '-L' to list shares (default), " \
-    "   '-N' for null session (no password), " \
-    "   '-U username' to specify username, " \
-    "   '-W workgroup' to specify workgroup/domain, " \
-    "   '-c \"command\"' to execute specific commands, " \
-    "   '-m SMB2' to force SMB2 protocol, " \
-    "   '-m SMB3' to force SMB3 protocol, " \
-    "   '//target/share' to connect to specific share"
+    description="Run smbclient to interact with SMB/CIFS shares on a target. " \
+    f"Args: target (str), options (SmbclientOptions, default {SmbclientOptions.LIST_SHARES.name}). " \
+    f"Available options: {', '.join([f'{opt.name}: {opt.description}' for opt in SmbclientOptions])}"
 )
 
 # LLM client

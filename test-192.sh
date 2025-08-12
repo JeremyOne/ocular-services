@@ -1,0 +1,1 @@
+python3 research.py "Research in detail 192.168.0.0/24 network, enumerate all machines, services, ports, vulnerabilities, and provide a detailed report. If a tool times out, run it again with a cheaper option."

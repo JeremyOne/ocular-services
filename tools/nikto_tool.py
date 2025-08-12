@@ -1,18 +1,19 @@
 import subprocess
 from . import util
+from .enums import NiktoOptions
 
-def nikto_scan(target: str, options: str = "-h") -> str:
+def nikto_scan(target: str, options: NiktoOptions = NiktoOptions.HOST_SCAN) -> str:
     """
     Runs nikto web vulnerability scanner on the given target.
     Args:
         target (str): The URL or IP address to scan.
-        options (str): Additional nikto options (default: "-h" for host scan).
+        options (NiktoOptions): Nikto options enum (default: NiktoOptions.HOST_SCAN).
     Returns:
         str: The output of the nikto command.
     """
-    util.log_text(f"nikto_scan called with target: '{target}', options: '{options}'")
+    util.log_text(f"nikto_scan called with target: '{target}', options: '{options.value}'")
     try:
-        cmd = ["nikto"] + options.split() + [target]
+        cmd = ["nikto"] + options.value.split() + [target]
         result = subprocess.run(
             cmd,
             stdout=subprocess.PIPE,

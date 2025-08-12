@@ -1,18 +1,19 @@
 import subprocess
 from . import util
+from .enums import SmbclientOptions
 
-def smbclient_scan(target: str, options: str = "-L") -> str:
+def smbclient_scan(target: str, options: SmbclientOptions = SmbclientOptions.LIST_SHARES) -> str:
     """
     Runs smbclient to interact with SMB/CIFS shares on the given target.
     Args:
         target (str): The IP address or hostname to scan.
-        options (str): Additional smbclient options (default: "-L" to list shares).
+        options (SmbclientOptions): Smbclient options enum (default: SmbclientOptions.LIST_SHARES).
     Returns:
         str: The output of the smbclient command.
     """
-    util.log_text(f"smbclient_scan called with target: '{target}', options: '{options}'")
+    util.log_text(f"smbclient_scan called with target: '{target}', options: '{options.value}'")
     try:
-        cmd = ["smbclient"] + options.split() + [target]
+        cmd = ["smbclient"] + options.value.split() + [target]
         result = subprocess.run(
             cmd,
             stdout=subprocess.PIPE,

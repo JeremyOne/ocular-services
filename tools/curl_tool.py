@@ -1,27 +1,22 @@
 import subprocess
 from . import util
+from .enums import CurlOptions
 
 
-def curl_test(url: str, options: str = "-I") -> str:
+def curl_test(url: str, options: CurlOptions = CurlOptions.HEADERS_ONLY) -> str:
     """
     Uses curl to get HTTP information relevant to penetration testing and HTTP discovery.
     Args:
         url (str): The target URL.
-        options (str): Additional curl options (default: '-I' for HTTP headers only).
+        options (CurlOptions): Curl options enum (default: CurlOptions.HEADERS_ONLY).
     Returns:
         str: The output of the curl command.
     """
     try:
-        # Common options for penetration testing:
-        # -I: Fetch headers only
-        # -L: Follow redirects
-        # -v: Verbose output (shows request/response)
-        # --http2: Test HTTP/2 support
-        # --trace-ascii: Detailed trace
-        util.log_text(f"Running curl with options: '{options}' on URL: '{url}'")
+        util.log_text(f"Running curl with options: '{options.value}' on URL: '{url}'")
 
         result = subprocess.run(
-            ["curl"] + options.split() + [url],
+            ["curl"] + options.value.split() + [url],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
