@@ -1,3 +1,5 @@
+sudo apt install python3.12-venv
+
 python3 -m venv .venv
 source .venv/bin/activate
 
@@ -7,11 +9,17 @@ pip install --upgrade -r requirements.txt
 
 
 # required tools
-nmap (apt)
-enum4linux (snap)
-smbclient (apt)
-nikto (apt)
+sudo apt install nmap
+sudo apt install smbclient
+sudo apt install nikto
+sudo apt install masscan
+sudo snap install enum4linux
 
+
+
+
+
+# Needs work - notes
 https://docs.docker.com/desktop/setup/install/linux/ubuntu/
 java 17+ - sudo apt install openjdk-21-jre-headless
 https://www.zaproxy.org/download/

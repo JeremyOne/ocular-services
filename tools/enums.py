@@ -115,3 +115,17 @@ class DnsRecordTypes(Enum):
         obj._value_ = value
         obj.description = description
         return obj
+
+
+class MasscanOptions(Enum):
+    TOP_1000_PORTS = ("--top-ports 1000 --rate 1000", "Scans top 1000 ports at 1000 packets/sec")
+    TOP_100_PORTS = ("--top-ports 100 --rate 1000", "Scans top 100 ports at 1000 packets/sec") 
+    VERY_FAST_SCAN = ("--top-ports 100 --rate 10000", "Scans top 100 ports at 10000 packets/sec (very fast)")
+    FULL_PORT_SCAN = ("-p 1-65535 --rate 1000", "Scans all 65535 ports at 1000 packets/sec (slow but comprehensive)")
+    LITE_SCAN = ("-p 22,80,443,445,3389,8080 --rate 1000", "Scans only common ports (22,80,443,445,3389,8080) at 1000 packets/sec")
+    
+    def __new__(cls, value, description):
+        obj = object.__new__(cls)
+        obj._value_ = value
+        obj.description = description
+        return obj
