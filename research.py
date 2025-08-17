@@ -21,16 +21,16 @@ from tools.nbtscan_tool import nbtscan_scan
 from tools.enum4linux_tool import enum4linux_scan
 from tools.nikto_tool import nikto_scan
 from tools.smbclient_tool import smbclient_scan
+#from tools.masscan_tool import masscan_scan
+from tools.httpx_tool import httpx_scan
+
 from tools.enums import (
     PingOptions, NmapOptions, CurlOptions, NbtscanOptions,
-    Enum4linuxOptions, NiktoOptions, SmbclientOptions, DnsRecordTypes
+    Enum4linuxOptions, NiktoOptions, SmbclientOptions, DnsRecordTypes, MasscanOptions, HttpxOptions
 )
-
 
 from dotenv import load_dotenv
 load_dotenv()
-
-
 
 # Define tools
 
@@ -101,6 +101,21 @@ smbclient_tool = FunctionTool(
     f"Available options: {', '.join([f'{opt.name}: {opt.description}' for opt in SmbclientOptions])}"
 )
 
+httpx_tool = FunctionTool(
+    httpx_scan,
+    description="Run httpx HTTP probe on a target URL or IP. " \
+    f"Args: target (str), options (HttpxOptions, default {HttpxOptions.BASIC_PROBE.name}). " \
+    f"Available options: {', '.join([f'{opt.name}: {opt.description}' for opt in HttpxOptions])}"
+)
+
+# Note this tool requires sudo - disabling for now
+#masscan_tool = FunctionTool(
+#    masscan_scan,
+#    description="Run a masscan scan on a target. " \
+#    f"Args: target (str), options (MasscanOptions, default {MasscanOptions.TOP_100_PORTS.name}). " \
+#    f"Available options: {', '.join([f'{opt.name}: {opt.description}' for opt in MasscanOptions])}"
+#)
+
 # LLM client
 openai_api_key=os.getenv("OPENAI_API_KEY")
 model_client = OpenAIChatCompletionClient(model="gpt-4.1", openai_api_key=openai_api_key)
@@ -109,9 +124,17 @@ model_client = OpenAIChatCompletionClient(model="gpt-4.1", openai_api_key=openai
 network_analysis_agent = AssistantAgent(
     name="Network_Analysis_Agent",
     model_client=model_client,
-    tools=[ping_tool, nmap_tool, dns_lookup_tool, nbtscan_tool, enum4linux_tool, nikto_tool, smbclient_tool],
+    tools=[curl_tool, dns_lookup_tool, enum4linux_tool, nbtscan_tool, nmap_tool, ping_tool, smbclient_tool],
     description="Follow instructions and analyze a given network or host, recommend additional tools to use and actions to take. If a tool times out, run it again with a cheaper option. ",
     system_message="You are a professional penetration tester and helpful AI assistant.",
+)
+
+webapp_analysis_agent = AssistantAgent(
+    name="WebApp_Analysis_Agent",
+    model_client=model_client,
+    tools=[curl_tool, nikto_tool, httpx_tool],
+    description="Analyze a web application for vulnerabilities and recommend actions.",
+    system_message="You are a professional web application expert and penetration tester.",
 )
 
 intent_analysis_agent = AssistantAgent(
@@ -149,7 +172,7 @@ agent_manager = AssistantAgent(
 #    description="Receives instructions from the user via keyboard input and relays them to the team.",
 #)
 
-team = RoundRobinGroupChat([network_analysis_agent, intent_analysis_agent, report_agent], max_turns=5)
+team = RoundRobinGroupChat([network_analysis_agent, webapp_analysis_agent, intent_analysis_agent, report_agent, agent_manager], max_turns=5)
 
 async def main():
     

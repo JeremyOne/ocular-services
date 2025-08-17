@@ -42,3 +42,13 @@ def log_text(text: str, log_file: str = None) -> None:
     with _log_file_lock:
         with open(path, "a", encoding="utf-8") as f:
             f.write(text + "\n")
+
+def list_enums(enum_class):
+    """
+    Returns a list of enum names and descriptions.
+    Args:
+        enum_class (Enum): The enum class to list.
+    Returns:
+        string: comma seporated of tuples containing enum name and description.
+    """
+    return f"{', '.join([f'{opt.name}: {opt.description}\r\n' for opt in enum_class])}"
