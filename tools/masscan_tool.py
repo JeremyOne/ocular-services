@@ -1,3 +1,5 @@
+# This tool requires root, not tested or verified, not recommended for production use.
+
 import subprocess
 import shlex
 from enum import Enum

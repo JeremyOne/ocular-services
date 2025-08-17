@@ -129,3 +129,17 @@ class MasscanOptions(Enum):
         obj._value_ = value
         obj.description = description
         return obj
+
+
+class HttpxOptions(Enum):
+    BASIC_PROBE = ("-status-code -title -tech-detect", "Basic probe with status code, title and technology detection")
+    HEADERS_ONLY = ("-status-code -headers -web -no-color -silent", "Returns only headers with status code")
+    DETAILED_SCAN = ("-status-code -title -tech-detect -content-length -web-server -method -ip -cname -cdn -ports 80,443,8080,8443", "Detailed scan with multiple data points")
+    VULNERABILITY_SCAN = ("-status-code -title -tech-detect -path '/robots.txt,/.git/HEAD,/.env,/wp-login.php,/admin/' -web -no-color", "Scan for common vulnerabilities and paths")
+    #SCREENSHOT = ("-status-code -title -tech-detect -screenshot -silent", "Take screenshots of websites (requires Chrome/Chromium)")
+    
+    def __new__(cls, value, description):
+        obj = object.__new__(cls)
+        obj._value_ = value
+        obj.description = description
+        return obj

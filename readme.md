@@ -1,3 +1,5 @@
+git config --global push.autoSetupRemote true
+
 sudo apt install python3.12-venv
 
 python3 -m venv .venv
@@ -15,11 +17,27 @@ sudo apt install nikto
 sudo apt install masscan
 sudo snap install enum4linux
 
+## HTTPX
+### Install Go if not already installed
+sudo apt-get update
+sudo apt-get install golang-go
 
+### Set up Go environment variables
+echo 'export GOPATH=$HOME/go' >> ~/.bashrc
+echo 'export PATH=$PATH:$GOPATH/bin' >> ~/.bashrc
+source ~/.bashrc
 
+### Install httpx
+go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest
+
+## wpscan
+sudo apt install ruby-rubygems ruby-dev
+sudo gem install wpscan
 
 
 # Needs work - notes
+httpx? - needs go
+
 https://docs.docker.com/desktop/setup/install/linux/ubuntu/
 java 17+ - sudo apt install openjdk-21-jre-headless
 https://www.zaproxy.org/download/

@@ -21,11 +21,12 @@ from tools.nbtscan_tool import nbtscan_scan
 from tools.enum4linux_tool import enum4linux_scan
 from tools.nikto_tool import nikto_scan
 from tools.smbclient_tool import smbclient_scan
-from tools.masscan_tool import masscan_scan
+#from tools.masscan_tool import masscan_scan
+from tools.httpx_tool import httpx_scan
 
 from tools.enums import (
     PingOptions, NmapOptions, CurlOptions, NbtscanOptions,
-    Enum4linuxOptions, NiktoOptions, SmbclientOptions, DnsRecordTypes, MasscanOptions
+    Enum4linuxOptions, NiktoOptions, SmbclientOptions, DnsRecordTypes, MasscanOptions, HttpxOptions
 )
 
 from dotenv import load_dotenv
@@ -100,6 +101,14 @@ smbclient_tool = FunctionTool(
     f"Available options: {', '.join([f'{opt.name}: {opt.description}' for opt in SmbclientOptions])}"
 )
 
+httpx_tool = FunctionTool(
+    httpx_scan,
+    description="Run httpx HTTP probe on a target URL or IP. " \
+    f"Args: target (str), options (HttpxOptions, default {HttpxOptions.BASIC_PROBE.name}). " \
+    f"Available options: {', '.join([f'{opt.name}: {opt.description}' for opt in HttpxOptions])}"
+)
+
+# Note this tool requires sudo - disabling for now
 #masscan_tool = FunctionTool(
 #    masscan_scan,
 #    description="Run a masscan scan on a target. " \
@@ -123,7 +132,7 @@ network_analysis_agent = AssistantAgent(
 webapp_analysis_agent = AssistantAgent(
     name="WebApp_Analysis_Agent",
     model_client=model_client,
-    tools=[curl_tool, nikto_tool],
+    tools=[curl_tool, nikto_tool, httpx_tool],
     description="Analyze a web application for vulnerabilities and recommend actions.",
     system_message="You are a professional web application expert and penetration tester.",
 )
