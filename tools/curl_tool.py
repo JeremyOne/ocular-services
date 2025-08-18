@@ -13,7 +13,7 @@ def curl_test(url: str, options: CurlOptions = CurlOptions.HEADERS_ONLY) -> str:
         str: The output of the curl command.
     """
     try:
-        util.log_text(f"Running curl with options: '{options.value}' on URL: '{url}'")
+        util.log_text(f"Running curl with options: '{options.name}:{options.value}' on URL: '{url}'")
 
         result = subprocess.run(
             ["curl"] + options.value.split() + [url],

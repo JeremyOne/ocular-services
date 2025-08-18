@@ -2,6 +2,7 @@ import os
 import time
 import markdown
 import pdfkit
+from tools.util import log_text
 
 def write_report(content: str, hostname: str) -> str:
     """
@@ -22,7 +23,7 @@ def write_report(content: str, hostname: str) -> str:
     # Also convert the markdown to PDF 
     # markdown_export(filename)
 
-    return f"Report written to '{os.path.abspath(filename)}'"
+    log_text(f"Report written to '{os.path.abspath(filename)}'");
 
 
 

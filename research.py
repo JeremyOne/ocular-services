@@ -21,12 +21,13 @@ from tools.nbtscan_tool import nbtscan_scan
 from tools.enum4linux_tool import enum4linux_scan
 from tools.nikto_tool import nikto_scan
 from tools.smbclient_tool import smbclient_scan
-#from tools.masscan_tool import masscan_scan
 from tools.httpx_tool import httpx_scan
+from tools.wpscan_tool import wpscan_scan
+#from tools.masscan_tool import masscan_scan - needs root
 
 from tools.enums import (
-    PingOptions, NmapOptions, CurlOptions, NbtscanOptions,
-    Enum4linuxOptions, NiktoOptions, SmbclientOptions, DnsRecordTypes, MasscanOptions, HttpxOptions
+    PingOptions, NmapOptions, CurlOptions, NbtScanOptions,
+    Enum4linuxOptions, NiktoOptions, SmbClientOptions, DnsRecordTypes, MasscanOptions, HttpxOptions, WpScanOptions
 )
 
 from dotenv import load_dotenv
@@ -72,7 +73,6 @@ curl_tool = FunctionTool(
     f"Available options: {', '.join([f'{opt.name}: {opt.description}' for opt in CurlOptions])}"
 )
 
-# Tool registration example:
 nbtscan_tool = FunctionTool(
     nbtscan_scan,
     description="Run nbtscan to enumerate NetBIOS information on a target. " \
@@ -89,7 +89,7 @@ enum4linux_tool = FunctionTool(
 
 nikto_tool = FunctionTool(
     nikto_scan,
-    description="Run nikto web vulnerability scanner on a target. " \
+    description="Run nikto web vulnerability scanner on a target. This tool is designed to identify potential vulnerabilities in web applications." \
     f"Args: target (str), options (NiktoOptions, default {NiktoOptions.HOST_SCAN.name}). " \
     f"Available options: {', '.join([f'{opt.name}: {opt.description}' for opt in NiktoOptions])}"
 )
@@ -97,15 +97,22 @@ nikto_tool = FunctionTool(
 smbclient_tool = FunctionTool(
     smbclient_scan,
     description="Run smbclient to interact with SMB/CIFS shares on a target. " \
-    f"Args: target (str), options (SmbclientOptions, default {SmbclientOptions.LIST_SHARES.name}). " \
-    f"Available options: {', '.join([f'{opt.name}: {opt.description}' for opt in SmbclientOptions])}"
+    f"Args: target (str), options (SmbClientOptions, default {SmbClientOptions.LIST_SHARES.name}). " \
+    f"Available options: {', '.join([f'{opt.name}: {opt.description}' for opt in SmbClientOptions])}"
 )
 
 httpx_tool = FunctionTool(
     httpx_scan,
-    description="Run httpx HTTP probe on a target URL or IP. " \
+    description="Run httpx HTTP probe on a target URL or IP. This tool is designed to identify potential vulnerabilities in web applications." \
     f"Args: target (str), options (HttpxOptions, default {HttpxOptions.BASIC_PROBE.name}). " \
     f"Available options: {', '.join([f'{opt.name}: {opt.description}' for opt in HttpxOptions])}"
+)
+
+wpscan_tool = FunctionTool(
+    wpscan_scan,
+    description="Run WPScan on a WordPress target URL. This tool should be run on all WordPress sites." \
+    f"Args: target (str), options (WpScanOptions, default {WpScanOptions.BASIC_SCAN.name}). " \
+    f"Available options: {', '.join([f'{opt.name}: {opt.description}' for opt in WpScanOptions])}"
 )
 
 # Note this tool requires sudo - disabling for now
@@ -132,7 +139,7 @@ network_analysis_agent = AssistantAgent(
 webapp_analysis_agent = AssistantAgent(
     name="WebApp_Analysis_Agent",
     model_client=model_client,
-    tools=[curl_tool, nikto_tool, httpx_tool],
+    tools=[curl_tool, nikto_tool, httpx_tool, wpscan_tool],
     description="Analyze a web application for vulnerabilities and recommend actions.",
     system_message="You are a professional web application expert and penetration tester.",
 )
@@ -151,20 +158,18 @@ report_agent = AssistantAgent(
     name="Report_Agent",
     model_client=model_client,
     tools=[write_report_tool, datetime_tool],
-    description="Generate a report based the analysis and tool outputs in HTML. \n",
-    system_message="You are a helpful assistant that can write a comprehensive report using the information provided by the analysis agent. \n" \
-    "If you need more information, ask the Network_Analysis_Agent or Intent_Analysis_Agent to provide it. \n" \
-    "If you are ready to write the report, use the write_report tool. \n" \
-    "You can also ask the Agent_Manager to review the report before writing it. \n" \
-    "Use this HTML template to write the report: \n\n------\n\n" + load_template("reports/report_template.htmlt")
+    description="Generate a report based the analysis and tool outputs in markdown. \n",
+    system_message="You are a helpful assistant that can write a comprehensive report using the information provided by all agents. \n" \
+    "Use this template to write the report: \n\n------\n\n" + load_template("reports/template.mdt")
 )
 
 agent_manager = AssistantAgent( 
     name="Agent_Manager",
     model_client=model_client,
     description="Manages the team of agents and coordinates their actions.",
-    system_message="You are a helpful manager with that can analyze networking, " \
-    "security and suggest improvements to all agents. When the report is ready to generate and has enough detail, ask the Report_Agent to write it.",
+    system_message="You are a skilled manager of agents that can advise on networking, security, and compliance. Suggest improvements to all agents. \r\n" \
+    "If you need more information to complete the report and the intention provided by the user, ask the Network_Analysis_Agent, WebApp_Analysis_Agent, or Intent_Analysis_Agent to provide it. \r\n" \
+    "When the report is ready to generate and has enough detail, ask the Report_Agent to write it.",
 )
 
 #user_agent = UserProxyAgent (
