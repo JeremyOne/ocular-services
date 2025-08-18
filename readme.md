@@ -10,11 +10,14 @@ pip install -r requirements.txt
 pip install --upgrade -r requirements.txt
 
 
-# required tools
+# Implemented / required tools
+
+## Simple installs
 sudo apt install nmap
 sudo apt install smbclient
 sudo apt install nikto
 sudo apt install masscan
+sudo apt install whois
 sudo snap install enum4linux
 
 ## HTTPX
@@ -34,16 +37,15 @@ go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest
 sudo apt install ruby-rubygems ruby-dev
 sudo gem install wpscan
 
-
-# Needs work - notes
-httpx? - needs go
-
+## Below here, notes
 https://docs.docker.com/desktop/setup/install/linux/ubuntu/
 java 17+ - sudo apt install openjdk-21-jre-headless
 https://www.zaproxy.org/download/
 
+sudo systemctl status docker
+sudo service docker start
 
-For PDFs
+## Not implemented - potential PDF renderer
 sudo apt-get install wkhtmltopdf
 
 Docker
@@ -55,7 +57,3 @@ sudo apt update -y
 sudo apt install ./docker-desktop-<version>-<arch>.deb
 
 sudo usermod -aG kvm $USER
-
-#Docker
-sudo systemctl status docker
-sudo service docker start

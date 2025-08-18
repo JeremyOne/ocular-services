@@ -1,6 +1,7 @@
 import asyncio
 import sys
 import os
+from datetime import datetime
 
 from autogen_agentchat.agents import UserProxyAgent 
 from autogen_agentchat.agents import AssistantAgent
@@ -23,11 +24,12 @@ from tools.nikto_tool import nikto_scan
 from tools.smbclient_tool import smbclient_scan
 from tools.httpx_tool import httpx_scan
 from tools.wpscan_tool import wpscan_scan
+from tools.whois_tool import whois_lookup
 #from tools.masscan_tool import masscan_scan - needs root
 
 from tools.enums import (
     PingOptions, NmapOptions, CurlOptions, NbtScanOptions,
-    Enum4linuxOptions, NiktoOptions, SmbClientOptions, DnsRecordTypes, MasscanOptions, HttpxOptions, WpScanOptions
+    Enum4linuxOptions, NiktoOptions, SmbClientOptions, DnsRecordTypes, MasscanOptions, HttpxOptions, WpScanOptions, WhoisOptions
 )
 
 from dotenv import load_dotenv
@@ -76,8 +78,8 @@ curl_tool = FunctionTool(
 nbtscan_tool = FunctionTool(
     nbtscan_scan,
     description="Run nbtscan to enumerate NetBIOS information on a target. " \
-    f"Args: target (str), options (Optional[NbtscanOptions]). " \
-    f"Available options: {', '.join([f'{opt.name}: {opt.description}' for opt in NbtscanOptions])}"
+    f"Args: target (str), options (Optional[NbtScanOptions]). " \
+    f"Available options: {', '.join([f'{opt.name}: {opt.description}' for opt in NbtScanOptions])}"
 )
 
 enum4linux_tool = FunctionTool(
@@ -115,6 +117,13 @@ wpscan_tool = FunctionTool(
     f"Available options: {', '.join([f'{opt.name}: {opt.description}' for opt in WpScanOptions])}"
 )
 
+whois_tool = FunctionTool(
+    whois_lookup,
+    description="Perform WHOIS lookup on a domain to get registration details including registrar and registrant information. " \
+    f"Args: domain (str), options (WhoisOptions, default {WhoisOptions.BASIC_WHOIS.name}). " \
+    f"Available options: {', '.join([f'{opt.name}: {opt.description}' for opt in WhoisOptions])}"
+)
+
 # Note this tool requires sudo - disabling for now
 #masscan_tool = FunctionTool(
 #    masscan_scan,
@@ -131,7 +140,7 @@ model_client = OpenAIChatCompletionClient(model="gpt-4.1", openai_api_key=openai
 network_analysis_agent = AssistantAgent(
     name="Network_Analysis_Agent",
     model_client=model_client,
-    tools=[curl_tool, dns_lookup_tool, enum4linux_tool, nbtscan_tool, nmap_tool, ping_tool, smbclient_tool],
+    tools=[curl_tool, dns_lookup_tool, enum4linux_tool, nbtscan_tool, nmap_tool, ping_tool, smbclient_tool, whois_tool],
     description="Follow instructions and analyze a given network or host, recommend additional tools to use and actions to take. If a tool times out, run it again with a cheaper option. ",
     system_message="You are a professional penetration tester and helpful AI assistant.",
 )
@@ -185,26 +194,118 @@ async def main():
         print("Usage: python research.py '<task description>'")
         return
 
-    log_text(f"Starting research task: {sys.argv[1]}")
-
     task = sys.argv[1]
+    log_text(f"=== RESEARCH SESSION STARTED ===")
+    log_text(f"Task: {task}")
+    log_text(f"Timestamp: {datetime.now().isoformat()}")
+    log_text(f"Agents: {', '.join([agent.name for agent in [network_analysis_agent, webapp_analysis_agent, intent_analysis_agent, report_agent, agent_manager]])}")
+    log_text(f"=====================================")
+
     stream = team.run_stream(task=task)
     
     # Create a custom handler to log messages while displaying them
     async def log_and_display():
+        message_count = 0
+        tool_call_count = 0
+        
         async for message in stream:
-            # Log the message
-            if hasattr(message, 'source') and hasattr(message, 'content'):
-                log_text(f"[{message.source}]: {message.content}")
-            elif hasattr(message, 'content'):
-                log_text(f"[MESSAGE]: {message.content}")
-            else:
-                log_text(f"[STREAM]: {str(message)}")
+            message_count += 1
+            
+            # Enhanced message logging with more details
+            timestamp = datetime.now().strftime("%H:%M:%S")
+            
+            try:
+                if hasattr(message, 'source') and hasattr(message, 'content'):
+                    # Log agent messages with structured format
+                    agent_name = message.source
+                    content = message.content
+                    
+                    # Handle both string and list content
+                    if isinstance(content, list):
+                        content_str = ' '.join(str(item) for item in content)
+                    elif isinstance(content, str):
+                        content_str = content
+                    elif content is None:
+                        content_str = "[None]"
+                    else:
+                        content_str = str(content)
+                    
+                    # Detect tool calls (with safety check)
+                    try:
+                        is_tool_call = any(keyword in content_str.lower() for keyword in ['running', 'tool', 'function_call'])
+                    except (AttributeError, TypeError):
+                        is_tool_call = False
+                        log_text(f"[{timestamp}] WARNING: Unable to process content for tool detection")
+                    
+                    if is_tool_call:
+                        tool_call_count += 1
+                        log_text(f"[{timestamp}] TOOL#{tool_call_count:03d} FROM {agent_name}:")
+                    else:
+                        log_text(f"[{timestamp}] MSG#{message_count:03d} FROM {agent_name}:")
+                    
+                    # Log with proper formatting - truncate preview but log full content separately
+                    preview = content_str[:150].replace('\n', ' ')
+                    log_text(f"  Preview: {preview}{'...' if len(content_str) > 150 else ''}")
+                    
+                    # Always log full content for debugging
+                    log_text(f"  Full Content:")
+                    for line in content_str.split('\n'):
+                        log_text(f"    {line}")
+                    
+                    # Log message metadata if available
+                    if hasattr(message, 'type'):
+                        log_text(f"  Message Type: {message.type}")
+                    
+                    # Log content type for debugging
+                    log_text(f"  Content Type: {type(content).__name__}")
+                        
+                    # Log additional attributes for debugging
+                    attrs = [attr for attr in dir(message) if not attr.startswith('_')]
+                    if attrs:
+                        log_text(f"  Attributes: {', '.join(attrs)}")
+                        
+                elif hasattr(message, 'content'):
+                    content = message.content
+                    
+                    # Handle both string and list content for system messages
+                    if isinstance(content, list):
+                        content_str = ' '.join(str(item) for item in content)
+                    elif isinstance(content, str):
+                        content_str = content
+                    elif content is None:
+                        content_str = "[None]"
+                    else:
+                        content_str = str(content)
+                        
+                    log_text(f"[{timestamp}] MSG#{message_count:03d} SYSTEM:")
+                    log_text(f"  Content: {content_str}")
+                    log_text(f"  Content Type: {type(content).__name__}")
+                else:
+                    log_text(f"[{timestamp}] MSG#{message_count:03d} STREAM:")
+                    log_text(f"  Data: {str(message)}")
+                
+            except Exception as e:
+                # Catch any unexpected errors in logging
+                log_text(f"[{timestamp}] ERROR in logging message #{message_count:03d}: {str(e)}")
+                log_text(f"  Message type: {type(message).__name__}")
+                log_text(f"  Message attributes: {[attr for attr in dir(message) if not attr.startswith('_')]}")
+            
+            # Log separator for readability
+            log_text("  " + "=" * 60)
             
             # Yield the message for console display
             yield message
+        
+        # Log final statistics
+        log_text(f"Session Statistics: {message_count} messages, {tool_call_count} tool calls")
     
     await Console(log_and_display())
+    
+    # Log session end
+    log_text(f"=== RESEARCH SESSION COMPLETED ===")
+    log_text(f"Timestamp: {datetime.now().isoformat()}")
+    log_text(f"=====================================")
+    
     await model_client.close()
     
 
