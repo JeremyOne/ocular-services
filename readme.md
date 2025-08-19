@@ -18,6 +18,7 @@ sudo apt install smbclient
 sudo apt install nikto
 sudo apt install masscan
 sudo apt install whois
+sudo apt install nbtscan
 sudo snap install enum4linux
 
 ## HTTPX

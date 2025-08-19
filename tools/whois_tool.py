@@ -2,32 +2,10 @@
 
 import subprocess
 import shlex
-from enum import Enum
 from typing import Union, Optional
 import re
 import datetime
-
-
-class WhoisOptions(Enum):
-    """Enum for whois options."""
-    BASIC_WHOIS = ""
-    REGISTRAR_INFO = "-R"
-    ADMIN_CONTACT = "-a"
-    TECH_CONTACT = "-t"
-    FULL_DETAILS = "-H"
-    
-    def __init__(self, value):
-        self.cmd_option = value
-        if value == "":
-            self.description = "Basic WHOIS lookup with all information"
-        elif value == "-R":
-            self.description = "Show registrar information only"
-        elif value == "-a":
-            self.description = "Show administrative contact information"
-        elif value == "-t":
-            self.description = "Show technical contact information"
-        elif value == "-H":
-            self.description = "Hide legal disclaimers, show full details"
+from .enums import WhoisOptions
 
 
 def whois_lookup(domain: str, options: Optional[Union[WhoisOptions, str]] = WhoisOptions.BASIC_WHOIS) -> str:
@@ -52,7 +30,7 @@ def whois_lookup(domain: str, options: Optional[Union[WhoisOptions, str]] = Whoi
     
     # Convert option enum to string if it's an enum
     if isinstance(options, WhoisOptions):
-        options_str = options.cmd_option
+        options_str = options.value
     else:
         options_str = options or ""
     

@@ -32,7 +32,7 @@ def httpx_scan(target: str, options: Optional[HttpxOptions] = HttpxOptions.BASIC
     
     # Convert option enum to string if it's an enum
     if isinstance(options, HttpxOptions):
-        options_str = options.cmd_option
+        options_str = options.value
     else:
         options_str = options
     

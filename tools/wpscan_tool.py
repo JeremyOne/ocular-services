@@ -28,7 +28,7 @@ def wpscan_scan(target: str, options: Optional[Union[WpScanOptions, str]] = WpSc
     
     # Convert option enum to string if it's an enum
     if isinstance(options, WpScanOptions):
-        options_str = options.cmd_option
+        options_str = options.value
     else:
         options_str = options
     

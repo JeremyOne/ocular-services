@@ -181,26 +181,52 @@ agent_manager = AssistantAgent(
     "When the report is ready to generate and has enough detail, ask the Report_Agent to write it.",
 )
 
-#user_agent = UserProxyAgent (
-#    name="User_Agent",
-#    description="Receives instructions from the user via keyboard input and relays them to the team.",
-#)
+user_agent = UserProxyAgent(
+    name="User_Agent",
+    description="Receives instructions from the user via keyboard input and relays them to the team. Can provide additional context, clarifications, or new tasks."
+)
 
-team = RoundRobinGroupChat([network_analysis_agent, webapp_analysis_agent, intent_analysis_agent, report_agent, agent_manager], max_turns=5)
+# Two different team configurations
+interactive_team = RoundRobinGroupChat([user_agent, network_analysis_agent, webapp_analysis_agent, intent_analysis_agent, report_agent, agent_manager], max_turns=10)
+automated_team = RoundRobinGroupChat([network_analysis_agent, webapp_analysis_agent, intent_analysis_agent, report_agent, agent_manager], max_turns=5)
 
 async def main():
     
+    # Check for interactive mode
+    interactive_mode = len(sys.argv) > 1 and sys.argv[1].lower() in ['-i', '--interactive', 'interactive']
+    
     if len(sys.argv) < 2:
-        print("Usage: python research.py '<task description>'")
+        print("Usage:")
+        print("  python research.py '<task description>'          # Automated mode")
+        print("  python research.py --interactive                 # Interactive mode")
+        print("  python research.py -i                            # Interactive mode (short)")
         return
 
-    task = sys.argv[1]
-    log_text(f"=== RESEARCH SESSION STARTED ===")
+    if interactive_mode:
+        print("🤖 Starting Interactive Research Session")
+        print("💬 You can now chat with the agent team!")
+        print("📝 Type your requests and the agents will respond")
+        print("🚪 Type 'exit', 'quit', or press Ctrl+C to end the session")
+        print("=" * 60)
+        
+        task = input("\n🔍 Enter your initial research task: ").strip()
+        if not task:
+            task = "Hello, I'd like to start a research session. Please introduce yourselves and let me know what you can help with."
+        
+        team = interactive_team
+        log_text(f"=== INTERACTIVE RESEARCH SESSION STARTED ===")
+    else:
+        task = sys.argv[1]
+        team = automated_team
+        log_text(f"=== AUTOMATED RESEARCH SESSION STARTED ===")
+    
     log_text(f"Task: {task}")
     log_text(f"Timestamp: {datetime.now().isoformat()}")
-    log_text(f"Agents: {', '.join([agent.name for agent in [network_analysis_agent, webapp_analysis_agent, intent_analysis_agent, report_agent, agent_manager]])}")
+    log_text(f"Mode: {'Interactive' if interactive_mode else 'Automated'}")
+    log_text(f"Agents: {', '.join([agent.name for agent in team._participants])}")
     log_text(f"=====================================")
 
+    team._group_chat_manager_name = "Agent_Manager"
     stream = team.run_stream(task=task)
     
     # Create a custom handler to log messages while displaying them
@@ -295,6 +321,35 @@ async def main():
             
             # Yield the message for console display
             yield message
+            
+            # In interactive mode, allow user input after each agent response
+            if interactive_mode and hasattr(message, 'source') and message.source not in ["user", "User_Agent"]:
+                try:
+                    # Give user option to respond
+                    print(f"\n💬 {message.source} has responded. You can:")
+                    print("   - Type a message to continue the conversation")
+                    print("   - Press Enter to let agents continue")
+                    print("   - Type 'exit' to end the session")
+                    
+                    user_input = input("\n➤ Your response: ").strip()
+                    
+                    if user_input.lower() in ['exit', 'quit', 'q']:
+                        log_text(f"[{timestamp}] User requested session termination")
+                        break
+                    elif user_input:
+                        # Log user input
+                        log_text(f"[{timestamp}] USER_INPUT: {user_input}")
+
+                        stream.asend(user_input)
+
+                except KeyboardInterrupt:
+                    print("\n\n🚪 Session terminated by user (Ctrl+C)")
+                    log_text(f"[{timestamp}] Session terminated by KeyboardInterrupt")
+                    break
+                except EOFError:
+                    print("\n🚪 Session terminated (EOF)")
+                    log_text(f"[{timestamp}] Session terminated by EOF")
+                    break
         
         # Log final statistics
         log_text(f"Session Statistics: {message_count} messages, {tool_call_count} tool calls")
