@@ -35,7 +35,7 @@ def log_text(text: str, log_file: str = None) -> None:
     global _log_file_path
 
     if _log_file_path is None:
-        _log_file_path = f"reports/ocular_{datetime.now().strftime('%Y%m%d-%H%M%S')}.log"
+        _log_file_path = f"reports/ocular_{datetime.now().strftime('%Y-%m-%d_%H;%M;%S')}.log"
 
     path = log_file if log_file else _log_file_path
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")

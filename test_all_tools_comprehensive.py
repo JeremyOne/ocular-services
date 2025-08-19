@@ -22,17 +22,17 @@ from datetime import datetime
 from tools.enums import (
     NmapOptions, CurlOptions, NbtScanOptions, Enum4linuxOptions,
     NiktoOptions, SmbClientOptions, PingOptions, DnsRecordTypes,
-    MasscanOptions, HttpxOptions, WpScanOptions, WhoisOptions
+    HttpxOptions, WpScanOptions, WhoisOptions
 )
 
 # Test data for different tool types
 TEST_TARGETS = {
     'ip': '127.0.0.1',
-    'domain': 'example.com',
-    'url': 'http://127.0.0.1',
-    'https_url': 'https://example.com',
-    'range': '127.0.0.1-127.0.0.10',
-    'subnet': '127.0.0.0/24'
+    'domain': 'localhost',
+    'url': 'http://localhost',
+    'https_url': 'https://localhost',
+    'range': '192.168.0.1-192.168.0.10',
+    'subnet': '192.168.0.0/24'
 }
 
 class TestResults:
@@ -80,7 +80,6 @@ def test_enum_access():
         (SmbClientOptions, "SmbClientOptions"),
         (PingOptions, "PingOptions"),
         (DnsRecordTypes, "DnsRecordTypes"),
-        (MasscanOptions, "MasscanOptions"),
         (HttpxOptions, "HttpxOptions"),
         (WpScanOptions, "WpScanOptions"),
         (WhoisOptions, "WhoisOptions")
@@ -127,7 +126,6 @@ def test_tool_imports():
         ('tools.httpx_tool', 'httpx_scan'),
         ('tools.wpscan_tool', 'wpscan_scan'),
         ('tools.whois_tool', 'whois_lookup'),
-        ('tools.masscan_tool', 'masscan_scan'),
         ('tools.report_tool', 'write_report'),
         ('tools.datetime_tool', 'get_current_datetime')
     ]
@@ -148,20 +146,54 @@ def test_tool_enum_compatibility():
     results = TestResults()
     
     # Test each tool with its corresponding enum options
-    test_cases = [
-        ('ping_tool', 'ping_host', PingOptions.DEFAULT_COUNT, TEST_TARGETS['ip']),
-        ('nmap_tool', 'nmap_scan', NmapOptions.FAST_SCAN, TEST_TARGETS['ip']),
-        ('curl_tool', 'curl_test', CurlOptions.HEADERS_ONLY, TEST_TARGETS['url']),
-        ('dns_tool', 'dns_lookup', DnsRecordTypes.A_RECORD, TEST_TARGETS['domain']),
-        ('nbtscan_tool', 'nbtscan_scan', NbtScanOptions.VERBOSE, TEST_TARGETS['ip']),
-        ('enum4linux_tool', 'enum4linux_scan', Enum4linuxOptions.ALL_ENUMERATION, TEST_TARGETS['ip']),
-        ('nikto_tool', 'nikto_scan', NiktoOptions.HOST_SCAN, TEST_TARGETS['url']),
-        ('smbclient_tool', 'smbclient_scan', SmbClientOptions.LIST_SHARES, TEST_TARGETS['ip']),
-        ('httpx_tool', 'httpx_scan', HttpxOptions.BASIC_PROBE, TEST_TARGETS['url']),
-        ('wpscan_tool', 'wpscan_scan', WpScanOptions.BASIC_SCAN, TEST_TARGETS['url']),
-        ('whois_tool', 'whois_lookup', WhoisOptions.BASIC_WHOIS, TEST_TARGETS['domain']),
-        ('masscan_tool', 'masscan_scan', MasscanOptions.TOP_100_PORTS, TEST_TARGETS['ip'])
-    ]
+    # Generate test cases for EVERY enum option
+    test_cases = []
+    
+    # PingOptions - all options
+    for option in PingOptions:
+        test_cases.append(('ping_tool', 'ping_host', option, TEST_TARGETS['ip']))
+    
+    # NmapOptions - all options
+    for option in NmapOptions:
+        test_cases.append(('nmap_tool', 'nmap_scan', option, TEST_TARGETS['ip']))
+    
+    # CurlOptions - all options
+    for option in CurlOptions:
+        test_cases.append(('curl_tool', 'curl_test', option, TEST_TARGETS['url']))
+    
+    # DnsRecordTypes - all options
+    for option in DnsRecordTypes:
+        test_cases.append(('dns_tool', 'dns_lookup', option, TEST_TARGETS['domain']))
+    
+    # NbtScanOptions - all options
+    for option in NbtScanOptions:
+        test_cases.append(('nbtscan_tool', 'nbtscan_scan', option, TEST_TARGETS['ip']))
+    
+    # Enum4linuxOptions - all options
+    for option in Enum4linuxOptions:
+        test_cases.append(('enum4linux_tool', 'enum4linux_scan', option, TEST_TARGETS['ip']))
+    
+    # NiktoOptions - all options
+    for option in NiktoOptions:
+        test_cases.append(('nikto_tool', 'nikto_scan', option, TEST_TARGETS['url']))
+    
+    # SmbClientOptions - all options
+    for option in SmbClientOptions:
+        test_cases.append(('smbclient_tool', 'smbclient_scan', option, TEST_TARGETS['ip']))
+    
+    # HttpxOptions - all options
+    for option in HttpxOptions:
+        test_cases.append(('httpx_tool', 'httpx_scan', option, TEST_TARGETS['url']))
+    
+    # WpScanOptions - all options
+    for option in WpScanOptions:
+        test_cases.append(('wpscan_tool', 'wpscan_scan', option, TEST_TARGETS['url']))
+    
+    # WhoisOptions - all options
+    for option in WhoisOptions:
+        test_cases.append(('whois_tool', 'whois_lookup', option, TEST_TARGETS['domain']))
+    
+    
     
     for module_name, function_name, enum_option, target in test_cases:
         try:
@@ -216,7 +248,6 @@ def test_enum_option_coverage():
         'SmbClientOptions': SmbClientOptions,
         'PingOptions': PingOptions,
         'DnsRecordTypes': DnsRecordTypes,
-        'MasscanOptions': MasscanOptions,
         'HttpxOptions': HttpxOptions,
         'WpScanOptions': WpScanOptions,
         'WhoisOptions': WhoisOptions
