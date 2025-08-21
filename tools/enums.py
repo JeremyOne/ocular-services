@@ -6,8 +6,8 @@ class NmapOptions(Enum):
     STEALTH_NO_PING = ("-sS -Pn", "Stealth SYN scan without pinging the host (cheap operation)")
     RDP_VULN_SCAN = ("-p 3389 --script rdp-*", "Scan for RDP vulnerabilities on port 3389")
     AGGRESSIVE_OS_DETECTION = ("-A -T4", "Aggressive scan with OS detection and timing (expensive operation)")
-    UDP_SCAN = ("-sU", "UDP port scan (expensive operation)")
-    CVE_VULN_SCAN = ("-Pn --script vuln", "Scan for CVE vulnerabilities (expensive operation)")
+    #UDP_SCAN = ("-sU", "UDP port scan (expensive operation)") # requires root privileges
+    CVE_VULN_SCAN = ("-Pn --script vuln", "Scan for CVE vulnerabilities (expensive operation)") # often times out
     
     def __new__(cls, value, description):
         obj = object.__new__(cls)
@@ -95,6 +95,7 @@ class PingOptions(Enum):
     DEFAULT_COUNT = ("4", "Default ping count")
     LOW_COUNT = ("2", "Low ping count for quick tests")
     HIGH_COUNT = ("10", "High ping count for thorough tests")
+    LARGE_PING = ("f -s 1024", "Flood ping, large size")
     
     def __new__(cls, value, description):
         obj = object.__new__(cls)

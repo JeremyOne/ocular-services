@@ -307,6 +307,70 @@ def test_tool_specific_functionality():
     
     return results
 
+def read_latest_log_and_find_errors():
+    """Read the latest log file and search for 'error' and 'fail' keywords."""
+    
+    print("\n📄 Reading Latest Log File for Errors and Failures...")
+    results = TestResults()
+    
+    try:
+    
+        log_files = []
+        for pattern in "reports/*.log":
+            log_files.extend(glob.glob(pattern))
+        
+        if not log_files:
+            results.add_fail("Log file search", "No log files found")
+            return results
+        
+        # Get the most recent log file
+        latest_log = max(log_files, key=os.path.getmtime)
+        print(f"📁 Reading log file: {latest_log}")
+        
+        error_lines = []
+        fail_lines = []
+        line_number = 0
+        
+        with open(latest_log, 'r', encoding='utf-8', errors='ignore') as f:
+            for line in f:
+                line_number += 1
+                line_lower = line.lower().strip()
+                
+                if 'error' in line_lower:
+                    error_lines.append(f"Line {line_number}: {line.strip()}")
+                
+                if 'fail' in line_lower:
+                    fail_lines.append(f"Line {line_number}: {line.strip()}")
+        
+        # Report findings
+        if error_lines:
+            print(f"\n🔴 Found {len(error_lines)} lines containing 'error':")
+            for error_line in error_lines[:10]:  # Show first 10
+                print(f"  {error_line}")
+            if len(error_lines) > 10:
+                print(f"  ... and {len(error_lines) - 10} more error lines")
+        
+        if fail_lines:
+            print(f"\n🟠 Found {len(fail_lines)} lines containing 'fail':")
+            for fail_line in fail_lines[:10]:  # Show first 10
+                print(f"  {fail_line}")
+            if len(fail_lines) > 10:
+                print(f"  ... and {len(fail_lines) - 10} more failure lines")
+        
+        if not error_lines and not fail_lines:
+            results.add_pass("Log analysis - no errors or failures found")
+        else:
+            results.add_fail("Log analysis", f"Found {len(error_lines)} errors and {len(fail_lines)} failures")
+            
+    except FileNotFoundError as e:
+        results.add_fail("Log file access", f"File not found: {e}")
+    except PermissionError as e:
+        results.add_fail("Log file access", f"Permission denied: {e}")
+    except Exception as e:
+        results.add_fail("Log file analysis", str(e))
+    
+    return results
+
 def main():
     """Run all tests and provide comprehensive report."""
     print("🚀 Starting Comprehensive Tool and Enum Testing")
@@ -321,7 +385,8 @@ def main():
         test_tool_imports,
         test_enum_option_coverage,
         test_tool_enum_compatibility,
-        test_tool_specific_functionality
+        test_tool_specific_functionality,
+        read_latest_log_and_find_errors
     ]
     
     for test_suite in test_suites:
@@ -338,11 +403,15 @@ def main():
     
     # Print comprehensive summary
     all_results.summary()
+
+    
     
     print(f"\n📅 Test completed at: {datetime.now().isoformat()}")
     
     # Return exit code based on results
     return 0 if all_results.failed == 0 else 1
+
+    
 
 if __name__ == "__main__":
     sys.exit(main())
