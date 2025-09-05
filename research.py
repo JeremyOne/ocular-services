@@ -9,7 +9,9 @@ from autogen_agentchat.conditions import TextMentionTermination
 from autogen_agentchat.teams import RoundRobinGroupChat
 from autogen_agentchat.ui import Console
 from autogen_core.tools import FunctionTool
+from autogen_core.models import ModelFamily, ModelInfo
 from autogen_ext.models.openai import OpenAIChatCompletionClient
+from fastmcp import FastMCP
 
 from tools.ping_tool import ping_host
 from tools.nmap_tool import nmap_scan
@@ -29,7 +31,7 @@ from tools.whois_tool import whois_lookup
 
 from tools.enums import (
     PingOptions, NmapOptions, CurlOptions, NbtScanOptions,
-    Enum4linuxOptions, NiktoOptions, SmbClientOptions, DnsRecordTypes, MasscanOptions, HttpxOptions, WpScanOptions, WhoisOptions
+    Enum4linuxOptions, NiktoOptions, SmbClientOptions, DnsRecordTypes, HttpxOptions, WpScanOptions, WhoisOptions
 )
 
 from dotenv import load_dotenv
@@ -133,8 +135,35 @@ whois_tool = FunctionTool(
 #)
 
 # LLM client
-openai_api_key=os.getenv("OPENAI_API_KEY")
-model_client = OpenAIChatCompletionClient(model="gpt-4.1", openai_api_key=openai_api_key)
+
+# Model selection logic
+#todo: clean this up/standardize
+
+model_provider = os.getenv("MODEL_PROVIDER", "openai").lower()
+
+if model_provider == "lmstudio":
+
+    # For models not listed in autogen, you may need to provide model info manually
+    model_infos = ModelInfo(
+        model="openai/gpt-oss-120b",
+        vision=False,
+        function_calling=True,
+        json_output=False,
+        family=ModelFamily.UNKNOWN  # LM Studio does not provide family info
+    )
+
+    model_client = OpenAIChatCompletionClient(
+        base_url=os.getenv("LMSTUDIO_API_URL", "http://localhost:1234/v1"),
+        api_key=os.getenv("LMSTUDIO_API_KEY", "only-needed-for-remote-access"),
+        model=os.getenv("LMSTUDIO_MODEL", "openai/gpt-oss-20b"),
+        model_info=model_infos
+    )
+
+else:
+    openai_api_key = os.getenv("OPENAI_API_KEY")
+    openai_model = os.getenv("OPENAI_MODEL", "gpt-4.1")
+    model_client = OpenAIChatCompletionClient(model=openai_model, openai_api_key=openai_api_key)
+
 
 # Agents
 network_analysis_agent = AssistantAgent(
