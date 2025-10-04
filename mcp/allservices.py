@@ -12,10 +12,13 @@ from datetime_service import get_datetime
 from dns_service import dns_lookup_service
 from enum4linux_service import enum4linux_scan
 from whois_service import whois_lookup
+from wpscan_service import wpscan_scan
+from httpx_service import httpx_scan
+from nbtscan_service import nbtscan_scan
 
 # Combined MCP server for all ocular_agents services
 # This server provides access to multiple penetration testing tools
-# Currently includes: ping, curl, datetime, dns, enum4linux, whois
+# Currently includes: ping, curl, datetime, dns, enum4linux, whois, wpscan, httpx, nbtscan
 
 # Create FastMCP server
 mcp = FastMCP("Ocular Agents - All Services")
@@ -45,6 +48,18 @@ async def enum4linux_service(request: Request) -> JSONResponse:
 @mcp.custom_route("/whois", methods=["GET", "POST"])
 async def whois_service(request: Request) -> JSONResponse:
     return await whois_lookup(request)
+
+@mcp.custom_route("/wpscan", methods=["GET", "POST"])
+async def wpscan_service(request: Request) -> JSONResponse:
+    return await wpscan_scan(request)
+
+@mcp.custom_route("/httpx", methods=["GET", "POST"])
+async def httpx_service(request: Request) -> JSONResponse:
+    return await httpx_scan(request)
+
+@mcp.custom_route("/nbtscan", methods=["GET", "POST"])
+async def nbtscan_service(request: Request) -> JSONResponse:
+    return await nbtscan_scan(request)
 
 # Service Discovery Endpoint
 @mcp.custom_route("/services", methods=["GET"])
@@ -129,6 +144,51 @@ async def list_services(request: Request) -> JSONResponse:
                     "server": "Specific WHOIS server to query (optional)",
                     "timeout": "Command timeout in seconds (10-120, default: 30)"
                 }
+            },
+            {
+                "name": "wpscan",
+                "endpoint": "/wpscan",
+                "description": "WordPress security scanner using WPScan",
+                "methods": ["GET", "POST"],
+                "parameters": {
+                    "url": "Target WordPress URL (required, include http:// or https://)",
+                    "options": "Scan type: basic, plugins, themes, users, vulns, full, passive (default: basic)",
+                    "api_token": "WordPress vulnerability database API token (optional)",
+                    "timeout": "Command timeout in seconds (60-1800, default: 300)",
+                    "force": "Force scan even if WordPress not detected (boolean)",
+                    "random_user_agent": "Use random user agent (boolean)"
+                }
+            },
+            {
+                "name": "httpx",
+                "endpoint": "/httpx",
+                "description": "Fast HTTP/HTTPS service discovery and analysis",
+                "methods": ["GET", "POST"],
+                "parameters": {
+                    "targets": "Target hosts/URLs to probe (required, comma-separated for multiple)",
+                    "options": "Scan type: basic, detailed, headers, hashes, comprehensive (default: basic)",
+                    "ports": "Ports to probe (comma-separated, default: 80,443,8080,8443)",
+                    "paths": "Paths to test (comma-separated, optional)",
+                    "method": "HTTP method to use (default: GET)",
+                    "timeout": "Request timeout in seconds (5-120, default: 10)",
+                    "threads": "Number of threads (1-100, default: 50)",
+                    "rate_limit": "Requests per second limit (1-1000, default: 150)",
+                    "retries": "Number of retries (0-5, default: 2)"
+                }
+            },
+            {
+                "name": "nbtscan",
+                "endpoint": "/nbtscan",
+                "description": "NetBIOS name scanner for Windows network discovery",
+                "methods": ["GET", "POST"],
+                "parameters": {
+                    "target": "IP address, range, or subnet to scan (required)",
+                    "options": "Scan options: basic, verbose, script, hosts, lmhosts (default: basic)",
+                    "timeout": "Response timeout in milliseconds (100-30000, default: 1000)",
+                    "verbose": "Enable verbose output (boolean)",
+                    "retransmits": "Number of retransmits (0-10, default: 0)",
+                    "use_local_port": "Use local port 137 for scans (boolean, requires root)"
+                }
             }
         ]
     }
@@ -156,6 +216,9 @@ async def root(request: Request) -> JSONResponse:
             "/dns": "DNS record lookups",
             "/enum4linux": "SMB/CIFS enumeration",
             "/whois": "Domain registration information",
+            "/wpscan": "WordPress security scanning",
+            "/httpx": "HTTP/HTTPS service discovery",
+            "/nbtscan": "NetBIOS name scanning",
             "/health": "Health check"
         },
         "documentation": "See /services for detailed parameter information"
