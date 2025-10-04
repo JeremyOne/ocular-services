@@ -51,8 +51,8 @@ def check_service_status(host="localhost", port=8999):
     except requests.exceptions.ConnectionError:
         print("❌ Cannot connect to server")
         print("💡 Make sure the MCP server is running:")
-        print("   cd /home/jp/Documents/ocular_agents/mcp")
-        print("   /home/jp/Documents/ocular_agents/.venv/bin/python allservices.py")
+        print("   cd ocular_agents/mcp")
+        print("   python allservices.py")
         return False
     except requests.exceptions.Timeout:
         print("❌ Server timeout")
