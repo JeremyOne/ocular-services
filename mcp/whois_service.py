@@ -22,6 +22,21 @@ from starlette.responses import PlainTextResponse, JSONResponse
 # Create FastMCP server
 mcp = FastMCP("Whois Service")
 
+def get_service_info() -> list: [
+    {
+        "name": "whois",
+        "endpoint": "/whois",
+        "description": "WHOIS domain registration information lookup",
+        "methods": ["GET", "POST"],
+        "parameters": {
+            "domain": "Domain name to lookup (required, e.g., example.com)",
+            "options": "WHOIS options (optional, e.g., -R, -a, -t, -H)",
+            "server": "Specific WHOIS server to query (optional)",
+            "timeout": "Command timeout in seconds (10-120, default: 30)"
+        }
+    }
+]
+
 def parse_whois_output(whois_text: str, domain: str) -> dict:
     """Parse WHOIS output into structured JSON format matching schema.json"""
     result = {

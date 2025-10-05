@@ -34,6 +34,22 @@ from starlette.responses import PlainTextResponse, JSONResponse
 # Create FastMCP server
 mcp = FastMCP("Enum4linux Service")
 
+def get_service_info() -> list: [
+    {
+        "name": "enum4linux",
+        "endpoint": "/enum4linux",
+        "description": "SMB/CIFS enumeration using enum4linux tool",
+        "methods": ["GET", "POST"],
+        "parameters": {
+            "target": "Target hostname or IP address (required)",
+            "options": "Enumeration options (default: -a for all)",
+            "username": "Username for authentication (optional)",
+            "password": "Password for authentication (optional)",
+            "timeout": "Command timeout in seconds (30-600, default: 120)"
+        }
+    }
+]
+
 def parse_enum4linux_output(output: str) -> dict:
     """Parse enum4linux output into structured JSON format matching schema.json"""
     result = {

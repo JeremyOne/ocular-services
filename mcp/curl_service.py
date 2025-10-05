@@ -27,6 +27,26 @@ from starlette.responses import PlainTextResponse, JSONResponse
 # Create FastMCP server
 mcp = FastMCP("Curl Service")
 
+def get_option_descriptions() -> list: [
+        {
+        "name": "curl",
+        "endpoint": "/curl",
+        "description": "HTTP requests for web application testing",
+        "methods": ["GET", "POST"],
+        "parameters": {
+            "url": "Target URL (required)",
+            "method": "HTTP method (default: GET)",
+            "headers": "Custom headers (semicolon-separated)",
+            "data": "POST data",
+            "follow_redirects": "Follow HTTP redirects (boolean)",
+            "verbose": "Enable verbose output (boolean)",
+            "insecure": "Allow insecure SSL (boolean)",
+            "user_agent": "Custom User-Agent string",
+            "headers_only": "Get headers only (boolean)"
+        }
+    }
+]
+
 def parse_curl_output(output: str, stderr: str, options_used: str) -> dict:
     """Parse curl output into structured JSON format"""
     result = {

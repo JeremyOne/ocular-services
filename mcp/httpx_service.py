@@ -33,6 +33,26 @@ from starlette.responses import PlainTextResponse, JSONResponse
 # Create FastMCP server
 mcp = FastMCP("Httpx Service")
 
+def get_service_info() -> list: [
+    {
+        "name": "httpx",
+        "endpoint": "/httpx",
+        "description": "Fast HTTP/HTTPS service discovery and analysis",
+        "methods": ["GET", "POST"],
+        "parameters": {
+            "targets": "Target hosts/URLs to probe (required, comma-separated for multiple)",
+            "options": "Scan type: basic, detailed, headers, hashes, comprehensive (default: basic)",
+            "ports": "Ports to probe (comma-separated, default: 80,443,8080,8443)",
+            "paths": "Paths to test (comma-separated, optional)",
+            "method": "HTTP method to use (default: GET)",
+            "timeout": "Request timeout in seconds (5-120, default: 10)",
+            "threads": "Number of threads (1-100, default: 50)",
+            "rate_limit": "Requests per second limit (1-1000, default: 150)",
+            "retries": "Number of retries (0-5, default: 2)"
+        }
+    }
+]
+
 def parse_httpx_output(json_output: str) -> dict:
     """Parse httpx JSON output into structured JSON format matching schema.json"""
     result = {

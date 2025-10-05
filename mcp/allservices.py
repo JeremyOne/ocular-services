@@ -6,6 +6,19 @@ import time
 from fastmcp import FastMCP
 from starlette.requests import Request
 from starlette.responses import PlainTextResponse, JSONResponse
+
+import ping_service
+import curl_service  
+import datetime_service
+import dns_service
+import enum4linux_service
+import whois_service
+import wpscan_service
+import httpx_service
+import nbtscan_service
+import nmap_service
+import nikto_service
+
 from ping_service import ping_host
 from curl_service import curl_request
 from datetime_service import get_datetime
@@ -15,10 +28,13 @@ from whois_service import whois_lookup
 from wpscan_service import wpscan_scan
 from httpx_service import httpx_scan
 from nbtscan_service import nbtscan_scan
+from nmap_service import nmap_scan
+from nikto_service import nikto_scan
 
 # Combined MCP server for all ocular_agents services
 # This server provides access to multiple penetration testing tools
-# Currently includes: ping, curl, datetime, dns, enum4linux, whois, wpscan, httpx, nbtscan
+# Currently includes: ping, curl, datetime, dns, enum4linux, whois, wpscan, httpx, nbtscan, nmap, nikto
+# Currently includes: ping, curl, datetime, dns, enum4linux, whois, wpscan, httpx, nbtscan, nmap
 
 # Create FastMCP server
 mcp = FastMCP("Ocular Agents - All Services")
@@ -61,138 +77,41 @@ async def httpx_service(request: Request) -> JSONResponse:
 async def nbtscan_service(request: Request) -> JSONResponse:
     return await nbtscan_scan(request)
 
+@mcp.custom_route("/nmap", methods=["GET", "POST"])
+async def nmap_service(request: Request) -> JSONResponse:
+    return await nmap_scan(request)
+
+@mcp.custom_route("/nikto", methods=["GET", "POST"])
+async def nikto_service(request: Request) -> JSONResponse:
+    return await nikto_scan(request)
+
 # Service Discovery Endpoint
 @mcp.custom_route("/services", methods=["GET"])
+
 async def list_services(request: Request) -> JSONResponse:
     """List all available services in this MCP server."""
+
+    all_service_info = [
+        ping_service.get_service_info(),
+        curl_service.get_service_info(),
+        datetime_service.get_service_info(),
+        dns_service.get_service_info(),
+        enum4linux_service.get_service_info(),
+        whois_service.get_service_info(),
+        wpscan_service.get_service_info(),
+        httpx_service.get_service_info(),
+        nbtscan_service.get_service_info(),
+        nmap_service.get_service_info(),
+        nikto_service.get_service_info()
+    ]
+
     services = {
         "server": "Ocular Agents - All Services",
         "version": "1.0",
-        "services": [
-            {
-                "name": "ping",
-                "endpoint": "/ping",
-                "description": "Network connectivity testing using ICMP ping",
-                "methods": ["GET", "POST"],
-                "parameters": {
-                    "host": "Target hostname or IP address (required)",
-                    "count": "Number of ping packets (1-99, default: 5)",
-                    "interval": "Interval between packets (0.01-5.0, default: 1.0)",
-                    "packet_size": "Size of data bytes (1-65524, default: 56)"
-                }
-            },
-            {
-                "name": "curl",
-                "endpoint": "/curl",
-                "description": "HTTP requests for web application testing",
-                "methods": ["GET", "POST"],
-                "parameters": {
-                    "url": "Target URL (required)",
-                    "method": "HTTP method (default: GET)",
-                    "headers": "Custom headers (semicolon-separated)",
-                    "data": "POST data",
-                    "follow_redirects": "Follow HTTP redirects (boolean)",
-                    "verbose": "Enable verbose output (boolean)",
-                    "insecure": "Allow insecure SSL (boolean)",
-                    "user_agent": "Custom User-Agent string",
-                    "headers_only": "Get headers only (boolean)"
-                }
-            },
-            {
-                "name": "datetime",
-                "endpoint": "/datetime", 
-                "description": "Get current date and time with various formats",
-                "methods": ["GET", "POST"],
-                "parameters": {
-                    "timezone": "Timezone to convert to (optional)",
-                    "format": "Custom strftime format string (optional)",
-                    "utc": "Return UTC time (boolean, default: false)"
-                }
-            },
-            {
-                "name": "dns",
-                "endpoint": "/dns",
-                "description": "DNS record lookups and domain analysis",
-                "methods": ["GET", "POST"],
-                "parameters": {
-                    "host": "Hostname or domain to look up (required)",
-                    "record_types": "Comma-separated DNS record types (default: A,TXT)",
-                    "timeout": "DNS query timeout in seconds (1-30, default: 5)"
-                }
-            },
-            {
-                "name": "enum4linux",
-                "endpoint": "/enum4linux",
-                "description": "SMB/CIFS enumeration using enum4linux tool",
-                "methods": ["GET", "POST"],
-                "parameters": {
-                    "target": "Target hostname or IP address (required)",
-                    "options": "Enumeration options (default: -a for all)",
-                    "username": "Username for authentication (optional)",
-                    "password": "Password for authentication (optional)",
-                    "timeout": "Command timeout in seconds (30-600, default: 120)"
-                }
-            },
-            {
-                "name": "whois",
-                "endpoint": "/whois",
-                "description": "WHOIS domain registration information lookup",
-                "methods": ["GET", "POST"],
-                "parameters": {
-                    "domain": "Domain name to lookup (required, e.g., example.com)",
-                    "options": "WHOIS options (optional, e.g., -R, -a, -t, -H)",
-                    "server": "Specific WHOIS server to query (optional)",
-                    "timeout": "Command timeout in seconds (10-120, default: 30)"
-                }
-            },
-            {
-                "name": "wpscan",
-                "endpoint": "/wpscan",
-                "description": "WordPress security scanner using WPScan",
-                "methods": ["GET", "POST"],
-                "parameters": {
-                    "url": "Target WordPress URL (required, include http:// or https://)",
-                    "options": "Scan type: basic, plugins, themes, users, vulns, full, passive (default: basic)",
-                    "api_token": "WordPress vulnerability database API token (optional)",
-                    "timeout": "Command timeout in seconds (60-1800, default: 300)",
-                    "force": "Force scan even if WordPress not detected (boolean)",
-                    "random_user_agent": "Use random user agent (boolean)"
-                }
-            },
-            {
-                "name": "httpx",
-                "endpoint": "/httpx",
-                "description": "Fast HTTP/HTTPS service discovery and analysis",
-                "methods": ["GET", "POST"],
-                "parameters": {
-                    "targets": "Target hosts/URLs to probe (required, comma-separated for multiple)",
-                    "options": "Scan type: basic, detailed, headers, hashes, comprehensive (default: basic)",
-                    "ports": "Ports to probe (comma-separated, default: 80,443,8080,8443)",
-                    "paths": "Paths to test (comma-separated, optional)",
-                    "method": "HTTP method to use (default: GET)",
-                    "timeout": "Request timeout in seconds (5-120, default: 10)",
-                    "threads": "Number of threads (1-100, default: 50)",
-                    "rate_limit": "Requests per second limit (1-1000, default: 150)",
-                    "retries": "Number of retries (0-5, default: 2)"
-                }
-            },
-            {
-                "name": "nbtscan",
-                "endpoint": "/nbtscan",
-                "description": "NetBIOS name scanner for Windows network discovery",
-                "methods": ["GET", "POST"],
-                "parameters": {
-                    "target": "IP address, range, or subnet to scan (required)",
-                    "options": "Scan options: basic, verbose, script, hosts, lmhosts (default: basic)",
-                    "timeout": "Response timeout in milliseconds (100-30000, default: 1000)",
-                    "verbose": "Enable verbose output (boolean)",
-                    "retransmits": "Number of retransmits (0-10, default: 0)",
-                    "use_local_port": "Use local port 137 for scans (boolean, requires root)"
-                }
-            }
-        ]
+        "services": all_service_info
     }
     return JSONResponse(services)
+
 
 # Health Check Endpoint
 @mcp.custom_route("/health", methods=["GET"])
@@ -219,6 +138,7 @@ async def root(request: Request) -> JSONResponse:
             "/wpscan": "WordPress security scanning",
             "/httpx": "HTTP/HTTPS service discovery",
             "/nbtscan": "NetBIOS name scanning",
+            "/nmap": "Network mapping and port scanning",
             "/health": "Health check"
         },
         "documentation": "See /services for detailed parameter information"

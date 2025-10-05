@@ -12,6 +12,19 @@ from starlette.responses import PlainTextResponse, JSONResponse
 # Create FastMCP server
 mcp = FastMCP("DNS Service")
 
+def get_service_info() -> list: [
+    {
+        "name": "dns",
+        "endpoint": "/dns",
+        "methods": ["GET", "POST"],
+        "description": "Perform DNS lookups for various record types",
+        "parameters": {
+            "host": "Target hostname (required)",
+            "record_types": "Comma-separated list of DNS record types (default: A,MX,TXT)"
+        }
+    }
+]
+
 def parse_dns_output(host: str, record_types: List[str], results: dict) -> dict:
     """Parse DNS lookup results into structured format"""
     structured_result = {

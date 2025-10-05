@@ -140,3 +140,18 @@ Example Response:
 The DNS service is now fully integrated and provides comprehensive DNS analysis capabilities for penetration testing and reconnaissance workflows!
 
 https://gofastmcp.com/servers/server#running-the-server
+
+pkill -f "python3 allservices.py"
+
+cd /home/jp/Documents/ocular_agents && source .venv/bin/activate && cd mcp && python3 allservices.py &
+
+
+cd /home/jp/Documents/ocular_agents && source .venv/bin/activate && cd mcp && python3 allservices.py &
+cd /home/jp/Documents/ocular_agents && source .venv/bin/activate && cd mcp && python3 allservices.py &
+
+sleep 3 && curl -s "http://localhost:8999/services" | jq '.services[] | select(.name=="wpscan")'
+ps aux | grep allservices
+curl -s "http://localhost:8999/services" | jq '.services[6]'
+
+## testing nmap
+curl -s -X POST "http://localhost:8999/nmap" -H "Content-Type: application/json" -d '{"target": "127.0.0.1", "scan_type": "fast"}' | jq '.service, .return_code, .process_time_ms, .structured_output.scan_stats'
