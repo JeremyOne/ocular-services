@@ -1,1 +1,0 @@
-Implement https://github.com/google/langextract for extracting data from logs

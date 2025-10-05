@@ -1,1 +1,0 @@
-python3 research.py "Research quickly 172.0.0.1, enumerate common ports, vulnerabilities, web applications, and provide a detailed report."

@@ -1,4 +1,6 @@
-# Ocular
+# Ocular-services
+A set of MCP services focusted on network and security scanning
+
 
 ## Envionment Setup
 git config --global push.autoSetupRemote true
@@ -16,25 +18,6 @@ Install Packages:
 pip install -r requirements.txt
 pip install --upgrade -r requirements.txt
 ```
-
-## Envionment Config
-MODEL_PROVIDER=openai
-
-OPENAI_API_KEY=a1b2c3e4f5g
-OPENAI_MODEL=gpt-4.1
-
-Warning - not supported yet
-LMSTUDIO_API_URL=http://localhost:1234/v1
-LMSTUDIO_API_KEY=only-needed-for-remote-access
-LMSTUDIO_MODEL=openai/gpt-oss-120b
-
-MODEL_PROVIDER=
-    lmstudio, openai
-
-Note/warning - All AutoGen supported models are listed in: .venv/lib/python-ver/site-packages/autogen_ext/models/openai/_model_info.py
-
-If your desired model is not referenced in the above file, you will have to provide a ModelInfo object within the creation oflms OpenAIChatCompletionClient, which is outside the scope of this document.
-
 
 ## Implemented / required tools
 
@@ -70,26 +53,3 @@ go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest
 ### wpscan
 sudo apt install ruby-rubygems ruby-dev
 sudo gem install wpscan
-
-### Below here, notes
-https://docs.docker.com/desktop/setup/install/linux/ubuntu/
-java 17+ - sudo apt install openjdk-21-jre-headless
-https://www.zaproxy.org/download/
-
-sudo systemctl status docker
-sudo service docker start
-
-## Not implemented - potential PDF renderer
-sudo apt-get install wkhtmltopdf
-
-Docker
-sudo apt install -y ca-certificates curl gnupg lsb-release
-sudo mkdir -p /etc/apt/keyrings
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-sudo apt update -y
-sudo apt install ./docker-desktop-<version>-<arch>.deb
-
-sudo usermod -aG kvm $USER
-
-https://gofastmcp.com/getting-started/welcome

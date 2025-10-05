@@ -1,1 +1,0 @@
-python3 research.py "Research in detail https://stickersluts.love/, enumerate all services, ports, vulnerabilities, web applications, and provide a detailed report."
