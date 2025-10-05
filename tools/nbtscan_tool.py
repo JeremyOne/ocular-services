@@ -1,14 +1,14 @@
 import subprocess
 from . import util
-from .enums import NbtscanOptions
+from .enums import NbtScanOptions
 from typing import Optional
 
-def nbtscan_scan(target: str, options: Optional[NbtscanOptions] = None) -> str:
+def nbtscan_scan(target: str, options: Optional[NbtScanOptions] = None) -> str:
     """
     Runs nbtscan on the given target.
     Args:
         target (str): The IP address or subnet to scan.
-        options (Optional[NbtscanOptions]): Nbtscan options enum (optional).
+        options (Optional[NbtScanOptions]): Nbtscan options enum (optional).
     Returns:
         str: The output of the nbtscan command.
     """

@@ -27,7 +27,7 @@ def masscan_scan(target: str, options=MasscanOptions.TOP_100_PORTS):
     
     # Convert option enum to string if it's an enum
     if isinstance(options, MasscanOptions):
-        options_str = options.cmd_option
+        options_str = options.value
     else:
         options_str = options
     

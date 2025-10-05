@@ -1,0 +1,8 @@
+[
+    {
+        "api_type": "open_ai",
+        "model": "?",
+        "api-key": "your_api_key_here",
+        "base_url": "http://localhost:1234/v1"
+    }
+]

@@ -1,49 +1,85 @@
+# Ocular
+
+## Envionment Setup
 git config --global push.autoSetupRemote true
 
-sudo apt install python3.12-venv
 
+Tested with venv environments:
+```
+sudo apt install python3.12-venv
 python3 -m venv .venv
 source .venv/bin/activate
+```
 
+Install Packages:
+```
 pip install -r requirements.txt
-
 pip install --upgrade -r requirements.txt
+```
+
+## Envionment Config
+MODEL_PROVIDER=openai
+
+OPENAI_API_KEY=a1b2c3e4f5g
+OPENAI_MODEL=gpt-4.1
+
+Warning - not supported yet
+LMSTUDIO_API_URL=http://localhost:1234/v1
+LMSTUDIO_API_KEY=only-needed-for-remote-access
+LMSTUDIO_MODEL=openai/gpt-oss-120b
+
+MODEL_PROVIDER=
+    lmstudio, openai
+
+Note/warning - All AutoGen supported models are listed in: .venv/lib/python-ver/site-packages/autogen_ext/models/openai/_model_info.py
+
+If your desired model is not referenced in the above file, you will have to provide a ModelInfo object within the creation oflms OpenAIChatCompletionClient, which is outside the scope of this document.
 
 
-# required tools
+## Implemented / required tools
+
+### MCP
+pip install uv fastmcp 
+
+uv venv
+source .venv/bin/activate
+uv pip install fastmcp
+
+### Simple installs
 sudo apt install nmap
 sudo apt install smbclient
 sudo apt install nikto
 sudo apt install masscan
+sudo apt install whois
+sudo apt install nbtscan
 sudo snap install enum4linux
 
-## HTTPX
-### Install Go if not already installed
+### HTTPX
+#### Install Go if not already installed
 sudo apt-get update
 sudo apt-get install golang-go
 
-### Set up Go environment variables
+#### Set up Go environment variables
 echo 'export GOPATH=$HOME/go' >> ~/.bashrc
 echo 'export PATH=$PATH:$GOPATH/bin' >> ~/.bashrc
 source ~/.bashrc
 
-### Install httpx
+#### Install httpx
 go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest
 
-## wpscan
+### wpscan
 sudo apt install ruby-rubygems ruby-dev
 sudo gem install wpscan
 
-
-# Needs work - notes
-httpx? - needs go
-
+### Below here, notes
 https://docs.docker.com/desktop/setup/install/linux/ubuntu/
 java 17+ - sudo apt install openjdk-21-jre-headless
 https://www.zaproxy.org/download/
 
+sudo systemctl status docker
+sudo service docker start
 
-For PDFs
+## Not implemented - potential PDF renderer
 sudo apt-get install wkhtmltopdf
 
 Docker
@@ -56,6 +92,4 @@ sudo apt install ./docker-desktop-<version>-<arch>.deb
 
 sudo usermod -aG kvm $USER
 
-#Docker
-sudo systemctl status docker
-sudo service docker start
+https://gofastmcp.com/getting-started/welcome

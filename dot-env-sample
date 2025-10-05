@@ -1,1 +1,5 @@
 OPENAI_API_KEY=***
+LMSTUDIO_API_URL=http://localhost:1234/v1/chat/completions
+MODEL_PROVIDER=
+    lmstudio, openai
+    for support3ed models see: .venv/lib/python3.12/site-packages/autogen_ext/models/openai/_model_info.py

@@ -1,0 +1,21 @@
+{
+    "service": "ping",
+    "process_time_ms": 123,
+    "target": "172.0.0.1",
+
+    "arguments": {
+        "argument1": "string",
+        "argument2": 123,
+        "argument3": 1.023
+    },
+
+    "return_code": 0,
+    "raw_output": "string",
+    "raw_error": "string",
+
+    "structured_output": {
+        
+        "statistics": {
+        }
+    }
+}
