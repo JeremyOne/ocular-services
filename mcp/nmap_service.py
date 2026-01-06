@@ -20,8 +20,8 @@ from starlette.responses import PlainTextResponse, JSONResponse
 # Create FastMCP server
 mcp = FastMCP("Nmap Service")
 
-def get_service_info() -> list: [
-    {
+def get_service_info() -> dict:
+    return {
         "name": "nmap",
         "endpoint": "/nmap",
         "description": "Network Mapper for network discovery and security auditing",
@@ -34,7 +34,6 @@ def get_service_info() -> list: [
             "scripts": "Additional nmap scripts to run (optional)"
         }
     }
-]
 
 def parse_nmap_output(output: str, target: str, scan_type: str) -> dict:
     """Parse nmap output into structured JSON format"""

@@ -1,0 +1,21 @@
+services:
+  ocular-services:
+    build:
+      context: .
+    ports:
+      # Port Mapping: 8999:8999
+      # - Host Port: 8999 (left side) - Access the service on your machine at localhost:8999 or 127.0.0.1:8999
+      # - Container Port: 8999 (right side) - The port the application is listening on inside the container
+      #
+      # To access from host:
+      # - Web Browser: http://localhost:8999
+      # - cURL: curl http://localhost:8999
+      # - Application: Connect to 127.0.0.1:8999 or localhost:8999
+      #
+      # Note: Ensure no other service is using port 8999 on your host machine
+      - "8999:8999"
+    # Some tools (ping, certain nmap scans) may require extra Linux capabilities.
+    # If you don't need them, you can remove cap_add.
+    cap_add:
+      - NET_RAW
+      - NET_ADMIN

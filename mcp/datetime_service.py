@@ -11,8 +11,8 @@ from starlette.responses import PlainTextResponse, JSONResponse
 # Create FastMCP server
 mcp = FastMCP("DateTime Service")
 
-def get_service_info() -> list: [
-    {
+def get_service_info() -> dict:
+    return {
         "name": "datetime",
         "endpoint": "/datetime",
         "methods": ["GET", "POST"],
@@ -23,7 +23,6 @@ def get_service_info() -> list: [
             "utc": "Return UTC time (boolean, default: false)"
         }
     }
-]    
 
 def parse_datetime_info(dt: datetime) -> dict:
     """Parse datetime into structured format with various representations"""

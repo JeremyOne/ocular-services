@@ -3,6 +3,7 @@ import subprocess
 import json
 import os
 import tempfile
+import shutil
 from fastmcp import FastMCP
 from starlette.requests import Request
 from starlette.responses import PlainTextResponse, JSONResponse
@@ -33,8 +34,8 @@ from starlette.responses import PlainTextResponse, JSONResponse
 # Create FastMCP server
 mcp = FastMCP("Httpx Service")
 
-def get_service_info() -> list: [
-    {
+def get_service_info() -> dict:
+    return {
         "name": "httpx",
         "endpoint": "/httpx",
         "description": "Fast HTTP/HTTPS service discovery and analysis",
@@ -51,7 +52,6 @@ def get_service_info() -> list: [
             "retries": "Number of retries (0-5, default: 2)"
         }
     }
-]
 
 def parse_httpx_output(json_output: str) -> dict:
     """Parse httpx JSON output into structured JSON format matching schema.json"""
@@ -230,15 +230,18 @@ async def httpx_scan(request: Request) -> JSONResponse:
             retries = 5
         
         # Check if httpx is installed
-        httpx_path = None
-        for path in ["/home/jp/go/bin/httpx", "httpx"]:
-            try:
-                subprocess.run(["which" if path == "httpx" else "test", "-f" if path != "httpx" else "", path], 
-                             check=True, capture_output=True)
-                httpx_path = path
-                break
-            except subprocess.CalledProcessError:
-                continue
+        # Prefer PATH resolution, but also support a few common absolute locations.
+        httpx_path = shutil.which("httpx")
+        if not httpx_path:
+            for candidate in [
+                "/usr/local/bin/httpx",
+                "/usr/bin/httpx",
+                "/root/go/bin/httpx",
+                "/home/jp/go/bin/httpx",
+            ]:
+                if os.path.isfile(candidate) and os.access(candidate, os.X_OK):
+                    httpx_path = candidate
+                    break
         
         if not httpx_path:
             end_time = time.time()
@@ -257,7 +260,7 @@ async def httpx_scan(request: Request) -> JSONResponse:
                 },
                 "return_code": -1,
                 "raw_output": "",
-                "raw_error": "httpx is not installed. Please install it with 'go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest'",
+                "raw_error": "httpx is not installed. Install it and ensure it's on PATH (e.g., ProjectDiscovery httpx binary).",
                 "structured_output": {}
             }
             

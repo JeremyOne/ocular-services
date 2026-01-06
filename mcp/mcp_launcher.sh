@@ -4,7 +4,7 @@
 # Provides easy commands to manage and test the MCP services
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PYTHON_PATH="/home/jp/Documents/ocular_agents/.venv/bin/python"
+PYTHON_PATH="../.venv/bin/python"
 SERVER_PORT=8999
 
 # Colors for output

@@ -59,21 +59,19 @@ from starlette.responses import PlainTextResponse, JSONResponse
 # Create FastMCP server
 mcp = FastMCP("Ping Service")
 
-def get_service_info() -> list:
-    return [
-        {
-            "name": "ping",
-            "endpoint": "/ping",
-            "description": "Network connectivity testing using ICMP ping",
-            "methods": ["GET", "POST"],
-            "parameters": {
-                "host": "Target hostname or IP address (required)",
-                "count": "Number of ping packets (1-99, default: 5)",
-                "interval": "Interval between packets (0.01-5.0, default: 1.0)",
-                "packet_size": "Size of data bytes (1-65524, default: 56)"
-            }
+def get_service_info() -> dict:
+    return {
+        "name": "ping",
+        "endpoint": "/ping",
+        "description": "Network connectivity testing using ICMP ping",
+        "methods": ["GET", "POST"],
+        "parameters": {
+            "host": "Target hostname or IP address (required)",
+            "count": "Number of ping packets (1-99, default: 5)",
+            "interval": "Interval between packets (0.01-5.0, default: 1.0)",
+            "packet_size": "Size of data bytes (1-65524, default: 56)"
         }
-    ]
+    }
 
 def parse_ping_output(output: str) -> dict:
     """Parse ping output into structured JSON format matching schema.json"""

@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyd
+*.pyo
+*.pdb
+.pytest_cache/
+
+# Virtual envs
+.venv/
+venv/
+ENV/
+
+# Tooling
+.git/
+.gitignore
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs / outputs
+*.log
+
+# Docs/build artifacts
+*.pdf
+
+# Tests (optional)
+tests/

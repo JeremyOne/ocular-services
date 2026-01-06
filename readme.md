@@ -1,6 +1,36 @@
 # Ocular-services
 A set of MCP services focusted on network and security scanning
 
+run mcp/allservices.py to start all services.
+
+## Docker
+
+Build:
+```
+docker build -t ocular-services .
+```
+
+Run (port 8999):
+```
+docker run --rm -p 8999:8999 ocular-services
+```
+
+Run with extra capabilities (may be required for `ping` and some `nmap` scan types):
+```
+docker run --rm -p 8999:8999 --cap-add=NET_RAW --cap-add=NET_ADMIN ocular-services
+```
+
+Compose:
+```
+docker compose up --build
+```
+
+Quick check:
+```
+curl http://localhost:8999/health
+curl http://localhost:8999/services
+```
+
 
 ## Envionment Setup
 git config --global push.autoSetupRemote true

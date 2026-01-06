@@ -26,8 +26,8 @@ from starlette.responses import PlainTextResponse, JSONResponse
 # Create FastMCP server
 mcp = FastMCP("WPScan Service")
 
-def get_service_info() -> list: [
-    {
+def get_service_info() -> dict:
+    return {
         "name": "wpscan",
         "endpoint": "/wpscan",
         "description": "WordPress security scanner using WPScan",
@@ -41,7 +41,6 @@ def get_service_info() -> list: [
             "random_user_agent": "Use random user agent (boolean)"
         }
     }
-]
 
 def parse_wpscan_output(json_output: str, target_url: str) -> dict:
     """Parse wpscan JSON output into structured JSON format matching schema.json"""

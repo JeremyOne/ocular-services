@@ -7,23 +7,23 @@ from fastmcp import FastMCP
 from starlette.requests import Request
 from starlette.responses import PlainTextResponse, JSONResponse
 
-import ping_service
-import curl_service  
-import datetime_service
-import dns_service
-import enum4linux_service
-import whois_service
-import wpscan_service
-import httpx_service
-import nbtscan_service
-import nmap_service
-import nikto_service
+import ping_service as ping_service_module
+import curl_service as curl_service_module  
+import datetime_service as datetime_service_module
+import dns_service as dns_service_module
+# import enum4linux_service as enum4linux_service_module
+import whois_service as whois_service_module
+import wpscan_service as wpscan_service_module
+import httpx_service as httpx_service_module
+import nbtscan_service as nbtscan_service_module
+import nmap_service as nmap_service_module
+import nikto_service as nikto_service_module
 
 from ping_service import ping_host
 from curl_service import curl_request
 from datetime_service import get_datetime
 from dns_service import dns_lookup_service
-from enum4linux_service import enum4linux_scan
+#from enum4linux_service import enum4linux_scan
 from whois_service import whois_lookup
 from wpscan_service import wpscan_scan
 from httpx_service import httpx_scan
@@ -33,8 +33,6 @@ from nikto_service import nikto_scan
 
 # Combined MCP server for all ocular_agents services
 # This server provides access to multiple penetration testing tools
-# Currently includes: ping, curl, datetime, dns, enum4linux, whois, wpscan, httpx, nbtscan, nmap, nikto
-# Currently includes: ping, curl, datetime, dns, enum4linux, whois, wpscan, httpx, nbtscan, nmap
 
 # Create FastMCP server
 mcp = FastMCP("Ocular Agents - All Services")
@@ -57,9 +55,9 @@ async def datetime_service(request: Request) -> JSONResponse:
 async def dns_service(request: Request) -> JSONResponse:
     return await dns_lookup_service(request)
 
-@mcp.custom_route("/enum4linux", methods=["GET", "POST"])
-async def enum4linux_service(request: Request) -> JSONResponse:
-    return await enum4linux_scan(request)
+#@mcp.custom_route("/enum4linux", methods=["GET", "POST"])
+#async def enum4linux_service(request: Request) -> JSONResponse:
+#    return await enum4linux_scan(request)
 
 @mcp.custom_route("/whois", methods=["GET", "POST"])
 async def whois_service(request: Request) -> JSONResponse:
@@ -92,17 +90,17 @@ async def list_services(request: Request) -> JSONResponse:
     """List all available services in this MCP server."""
 
     all_service_info = [
-        ping_service.get_service_info(),
-        curl_service.get_service_info(),
-        datetime_service.get_service_info(),
-        dns_service.get_service_info(),
-        enum4linux_service.get_service_info(),
-        whois_service.get_service_info(),
-        wpscan_service.get_service_info(),
-        httpx_service.get_service_info(),
-        nbtscan_service.get_service_info(),
-        nmap_service.get_service_info(),
-        nikto_service.get_service_info()
+        ping_service_module.get_service_info(),
+        curl_service_module.get_service_info(),
+        datetime_service_module.get_service_info(),
+        dns_service_module.get_service_info(),
+        # enum4linux_service_module.get_service_info(),
+        whois_service_module.get_service_info(),
+        wpscan_service_module.get_service_info(),
+        httpx_service_module.get_service_info(),
+        nbtscan_service_module.get_service_info(),
+        nmap_service_module.get_service_info(),
+        nikto_service_module.get_service_info()
     ]
 
     services = {

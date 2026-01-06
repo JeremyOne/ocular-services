@@ -25,8 +25,8 @@ from starlette.responses import PlainTextResponse, JSONResponse
 # Create FastMCP server
 mcp = FastMCP("NBTScan Service")
 
-def get_service_info() -> list: [
-    {
+def get_service_info() -> dict:
+    return {
         "name": "nbtscan",
         "endpoint": "/nbtscan",
         "description": "NetBIOS name scanner for Windows network discovery",
@@ -40,7 +40,6 @@ def get_service_info() -> list: [
             "use_local_port": "Use local port 137 for scans (boolean, requires root)"
         }
     }
-]
 
 def parse_nbtscan_output(output: str, target: str) -> dict:
     """Parse nbtscan output into structured JSON format matching schema.json"""
