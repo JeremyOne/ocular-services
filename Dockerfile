@@ -76,4 +76,5 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
 
 # allservices.py uses local imports (ping_service, etc.), so run from mcp/
 WORKDIR /app/mcp
-CMD ["python", "allservices.py"]
+#CMD ["fastmcp", "run", "/app/mcp/fastmcp.json", "--skip-env"]
+CMD ["python", "server.py"]

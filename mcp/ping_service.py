@@ -1,9 +1,7 @@
 from typing import Optional
 import subprocess
 import re
-from fastmcp import FastMCP
-from starlette.requests import Request
-from starlette.responses import PlainTextResponse, JSONResponse
+from starlette.responses import JSONResponse
 
 # Usage
 #   ping [options] <destination>
@@ -55,9 +53,7 @@ from starlette.responses import PlainTextResponse, JSONResponse
 #   -F <flowlabel>     define flow label, default is random
 #   -N <nodeinfo opt>  use IPv6 node info query, try <help> as argument
 
-# To run: uvicorn tools.ping_mcp_service:app --reload
-# Create FastMCP server
-mcp = FastMCP("Ping Service")
+
 
 def get_service_info() -> dict:
     return {
@@ -75,6 +71,7 @@ def get_service_info() -> dict:
 
 def parse_ping_output(output: str) -> dict:
     """Parse ping output into structured JSON format matching schema.json"""
+    
     result = {
         "bytes": None,
         "from": None,
@@ -175,9 +172,7 @@ def parse_ping_output(output: str) -> dict:
     return result
  
 
-
-@mcp.custom_route("/ping", methods=["GET", "POST"])
-async def ping_host(request: Request) -> JSONResponse:
+async def ping_host(host: str, count: int = 5, interval: float = 1.0, packet_size: int = 56) -> JSONResponse:
     """Ping a host to test network connectivity.
         host: The hostname or IP address to ping
         count: Number of ping packets to send (default: 5)
@@ -189,18 +184,6 @@ async def ping_host(request: Request) -> JSONResponse:
     start_time = time.time()
     
     try:
-        # Get parameters from query string or JSON body
-        if request.method == "GET":
-            host = request.query_params.get("host")
-            count = int(request.query_params.get("count", 5))
-            interval = float(request.query_params.get("interval", 1.0))
-            packet_size = int(request.query_params.get("packet_size", 56))
-        else:  # POST
-            body = await request.json()
-            host = body.get("host")
-            count = body.get("count", 5)
-            interval = body.get("interval", 1.0)
-            packet_size = body.get("packet_size", 56)
         
         if not host:
             return JSONResponse(
@@ -209,18 +192,23 @@ async def ping_host(request: Request) -> JSONResponse:
             )
         
         # Validate parameters
-        if count < 1:
-            count = 1
-        if count > 99:
-            count = 99
-        if interval < 0.01:
-            interval = 0.01
-        if interval > 5:
-            interval = 5
-        if packet_size < 1:
-            packet_size = 56
-        if packet_size > 65524:
-            packet_size = 65524
+        if count < 1 or count > 99:
+            return JSONResponse(
+                {"error": "count must be between 1 and 99"}, 
+                status_code=400
+            )
+        
+        if interval < 0.01 or interval > 5:
+            return JSONResponse(
+                {"error": "interval must be between 0.01 and 5 seconds"}, 
+                status_code=400
+            )
+        
+        if packet_size < 1 or packet_size > 65524:
+            return JSONResponse(
+                {"error": "packet_size must be between 1 and 65524"}, 
+                status_code=400
+            )
 
         result = subprocess.run(
             ["ping", 
@@ -278,11 +266,3 @@ async def ping_host(request: Request) -> JSONResponse:
         }
         
         return JSONResponse(response, status_code=500)
-
-@mcp.custom_route("/health", methods=["GET"])
-async def health_check(request: Request) -> PlainTextResponse:
-    return PlainTextResponse("OK")
-
-if __name__ == "__main__":
-    #mcp.run() stdio
-    mcp.run(transport="http", host="0.0.0.0", port=9000)

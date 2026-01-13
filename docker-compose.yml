@@ -14,8 +14,8 @@ services:
       #
       # Note: Ensure no other service is using port 8999 on your host machine
       - "8999:8999"
+    
     # Some tools (ping, certain nmap scans) may require extra Linux capabilities.
-    # If you don't need them, you can remove cap_add.
     cap_add:
       - NET_RAW
       - NET_ADMIN

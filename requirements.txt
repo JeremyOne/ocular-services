@@ -6,13 +6,9 @@ pandas
 python-dotenv 
 requests 
 bs4
-autogen_agentchat
-autogen_core
-autogen_ext
-autogen-ext[openai]
 python-dotenv
 dnspython
 markdown 
 pdfkit
-fastmcp
+fastmcp<3
 starlette
