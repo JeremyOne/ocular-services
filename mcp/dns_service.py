@@ -2,15 +2,11 @@ from typing import Optional, List
 import time
 import dns.resolver
 import dns.exception
-from fastmcp import FastMCP
-from starlette.requests import Request
-from starlette.responses import PlainTextResponse, JSONResponse
+from service_response import ServiceResponse
 
 # DNS service for DNS record lookups and domain analysis
 # Useful for reconnaissance, mail server discovery, and DNS enumeration
 
-# Create FastMCP server
-mcp = FastMCP("DNS Service")
 
 def get_service_info() -> dict:
     return {
@@ -23,51 +19,6 @@ def get_service_info() -> dict:
             "record_types": "Comma-separated list of DNS record types (default: A,MX,TXT)"
         }
     }
-
-def parse_dns_output(host: str, record_types: List[str], results: dict) -> dict:
-    """Parse DNS lookup results into structured format"""
-    structured_result = {
-        "host": host,
-        "records": {},
-        "summary": {
-            "total_record_types": len(record_types),
-            "successful_queries": 0,
-            "failed_queries": 0,
-            "has_ip_addresses": False,
-            "has_mail_records": False,
-            "has_txt_records": False
-        }
-    }
-    
-    for record_type in record_types:
-        record_key = f"{record_type.lower()}_records"
-        if record_key in results:
-            structured_result["records"][record_type] = results[record_key]
-            structured_result["summary"]["successful_queries"] += 1
-            
-            # Update summary flags
-            if record_type == "A" and results[record_key]:
-                structured_result["summary"]["has_ip_addresses"] = True
-            elif record_type in ["MX", "SPF"] and results[record_key]:
-                structured_result["summary"]["has_mail_records"] = True
-            elif record_type == "TXT" and results[record_key]:
-                structured_result["summary"]["has_txt_records"] = True
-        else:
-            structured_result["records"][record_type] = []
-            structured_result["summary"]["failed_queries"] += 1
-    
-    # Handle legacy format from original tool
-    if "ip_addresses" in results:
-        structured_result["records"]["A"] = results["ip_addresses"]
-        structured_result["summary"]["has_ip_addresses"] = bool(results["ip_addresses"])
-    
-    if "email_host" in results and results["email_host"]:
-        if "SPF" not in structured_result["records"]:
-            structured_result["records"]["SPF"] = []
-        structured_result["records"]["SPF"].append(f"include:{results['email_host']}")
-        structured_result["summary"]["has_mail_records"] = True
-    
-    return structured_result
 
 def dns_lookup_mcp(host: str, record_types: List[str]) -> dict:
     """Perform DNS lookup for specified record types"""
@@ -141,8 +92,7 @@ def dns_lookup_mcp(host: str, record_types: List[str]) -> dict:
     
     return result
 
-@mcp.custom_route("/dns", methods=["GET", "POST"])
-async def dns_lookup_service(request: Request) -> JSONResponse:
+async def dns_lookup(host: str, record_types: Optional[str] = "A,TXT", timeout: Optional[float] = 5, asJson: Optional[bool] = True) -> dict:
     """Perform DNS lookups for various record types.
         host: The hostname or domain to look up (required)
         record_types: Comma-separated list of DNS record types (default: A,TXT)
@@ -154,46 +104,28 @@ async def dns_lookup_service(request: Request) -> JSONResponse:
     
     try:
         # Get parameters from query string or JSON body
-        if request.method == "GET":
-            host = request.query_params.get("host")
-            record_types_param = request.query_params.get("record_types", "A,TXT")
-            timeout_param = float(request.query_params.get("timeout", 5))
-        else:  # POST
-            body = await request.json()
-            host = body.get("host")
-            record_types_param = body.get("record_types", "A,TXT")
-            timeout_param = body.get("timeout", 5)
-        
         if not host:
-            return JSONResponse(
-                {"error": "host parameter is required"}, 
-                status_code=400
-            )
+            return {"error": "host parameter is required"}
         
         # Parse record types
-        if isinstance(record_types_param, str):
-            record_types = [rt.strip().upper() for rt in record_types_param.split(",")]
-        else:
-            record_types = record_types_param if record_types_param else ["A", "TXT"]
+        if isinstance(record_types, str):
+            record_types = [rt.strip().upper() for rt in record_types.split(",")]
         
         # Validate timeout
-        if timeout_param < 1:
-            timeout_param = 1
-        elif timeout_param > 30:
-            timeout_param = 30
+        if timeout < 1:
+            return {"error": "timeout must be at least 1 second"}
+        elif timeout > 30:
+            return {"error": "timeout cannot exceed 30 seconds"}
         
         # Set DNS resolver timeout
-        dns.resolver.default_resolver.timeout = timeout_param
-        dns.resolver.default_resolver.lifetime = timeout_param
+        dns.resolver.default_resolver.timeout = timeout
+        dns.resolver.default_resolver.lifetime = timeout
         
         # Perform DNS lookup
         lookup_results = dns_lookup_mcp(host, record_types)
         
         end_time = time.time()
         process_time_ms = int((end_time - start_time) * 1000)
-        
-        # Parse results into structured format
-        structured_output = parse_dns_output(host, record_types, lookup_results)
         
         # Create raw output summary
         raw_output_lines = []
@@ -209,46 +141,36 @@ async def dns_lookup_service(request: Request) -> JSONResponse:
         raw_output = "\n".join(raw_output_lines)
         
         # Format response according to schema.json
-        response = {
-            "service": "dns",
-            "process_time_ms": process_time_ms,
-            "target": host,
-            "arguments": {
+        response = ServiceResponse(
+            service="dns",
+            process_time_ms=process_time_ms,
+            target=host,
+            arguments={
                 "record_types": record_types,
-                "timeout": timeout_param
+                "timeout": timeout
             },
-            "return_code": 0,
-            "raw_output": raw_output,
-            "raw_error": "",
-            "structured_output": structured_output
-        }
+            return_code=0,
+            raw_output=raw_output,
+            raw_error=""
+        )
         
-        return JSONResponse(response)
+        return response
         
     except Exception as e:
         end_time = time.time()
         process_time_ms = int((end_time - start_time) * 1000)
         
-        response = {
-            "service": "dns",
-            "process_time_ms": process_time_ms,
-            "target": host if 'host' in locals() else "unknown",
-            "arguments": {
+        response = ServiceResponse(
+            service="dns",
+            process_time_ms=process_time_ms,
+            target=host if 'host' in locals() else "unknown",
+            arguments={
                 "record_types": record_types if 'record_types' in locals() else ["A", "TXT"],
-                "timeout": timeout_param if 'timeout_param' in locals() else 5
+                "timeout": timeout if 'timeout_param' in locals() else 5
             },
-            "return_code": -1,
-            "raw_output": "",
-            "raw_error": str(e),
-            "structured_output": {}
-        }
+            return_code=-1,
+            raw_output="",
+            raw_error=str(e)
+        )
         
-        return JSONResponse(response, status_code=500)
-
-@mcp.custom_route("/health", methods=["GET"])
-async def health_check(request: Request) -> PlainTextResponse:
-    return PlainTextResponse("OK")
-
-if __name__ == "__main__":
-    # mcp.run() # stdio
-    mcp.run(transport="http", host="0.0.0.0", port=9004)
+        return response

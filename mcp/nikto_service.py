@@ -2,9 +2,7 @@ from typing import Optional
 import subprocess
 import re
 import json
-from fastmcp import FastMCP
-from starlette.requests import Request
-from starlette.responses import PlainTextResponse, JSONResponse
+from service_response import ServiceResponse
 
 # nikto - Web Server Scanner version 2.1.5
 # Web vulnerability scanner that performs comprehensive tests
@@ -18,9 +16,6 @@ from starlette.responses import PlainTextResponse, JSONResponse
 #   disclosure: Look for information disclosure (-Tuning 3)
 #   comprehensive: All tuning options combined
 #   fast: Quick scan with reduced checks
-
-# Create FastMCP server
-mcp = FastMCP("Nikto Service")
 
 def get_service_info() -> dict:
     """Get service information for the unified server"""
@@ -42,8 +37,6 @@ def get_service_info() -> dict:
     }
 
 
-
-def parse_nikto_output(output: str, target: str, scan_type: str) -> dict:
     """Parse nikto output into structured JSON format"""
     result = {
         "target": target,
@@ -252,7 +245,7 @@ def parse_nikto_output(output: str, target: str, scan_type: str) -> dict:
     
     return result
 
-async def nikto_scan(request: Request) -> JSONResponse:
+async def nikto_scan(request: Request):
     """Perform web vulnerability scan using nikto.
     
     Parameters:
@@ -304,9 +297,14 @@ async def nikto_scan(request: Request) -> JSONResponse:
             vhost = body.get("vhost")
         
         if not target:
-            return JSONResponse(
-                {"error": "target parameter is required"}, 
-                status_code=400
+            return ServiceResponse(
+                service="nikto",
+                process_time_ms=0,
+                target="",
+                arguments={},
+                return_code=-1,
+                raw_output="",
+                raw_error="target parameter is required"
             )
         
         # Validate parameters
@@ -326,11 +324,11 @@ async def nikto_scan(request: Request) -> JSONResponse:
             end_time = time.time()
             process_time_ms = int((end_time - start_time) * 1000)
             
-            response = {
-                "service": "nikto",
-                "process_time_ms": process_time_ms,
-                "target": target,
-                "arguments": {
+            response = ServiceResponse(
+                service="nikto",
+                process_time_ms=process_time_ms,
+                target=target,
+                arguments={
                     "scan_type": scan_type,
                     "port": port,
                     "ssl": ssl,
@@ -339,13 +337,12 @@ async def nikto_scan(request: Request) -> JSONResponse:
                     "plugins": plugins,
                     "vhost": vhost
                 },
-                "return_code": -1,
-                "raw_output": "",
-                "raw_error": "nikto is not installed. Please install it with 'sudo apt-get install nikto'",
-                "structured_output": {}
-            }
+                return_code=-1,
+                raw_output="",
+                raw_error="nikto is not installed. Please install it with 'sudo apt-get install nikto'"
+            )
             
-            return JSONResponse(response, status_code=500)
+            return response
         
         # Map scan types to nikto options
         scan_options = {
@@ -410,15 +407,12 @@ async def nikto_scan(request: Request) -> JSONResponse:
         # Combine stdout and stderr for nikto (it uses both)
         combined_output = raw_output + "\n" + raw_error
         
-        # Parse the nikto output into structured format
-        structured_output = parse_nikto_output(combined_output, target, scan_type) if combined_output.strip() else {}
-        
         # Format response according to schema.json
-        response = {
-            "service": "nikto",
-            "process_time_ms": process_time_ms,
-            "target": target,
-            "arguments": {
+        response = ServiceResponse(
+            service="nikto",
+            process_time_ms=process_time_ms,
+            target=target,
+            arguments={
                 "scan_type": scan_type,
                 "port": port,
                 "ssl": ssl,
@@ -427,23 +421,22 @@ async def nikto_scan(request: Request) -> JSONResponse:
                 "plugins": plugins,
                 "vhost": vhost
             },
-            "return_code": result.returncode,
-            "raw_output": combined_output,
-            "raw_error": "",  # Combined into raw_output for nikto
-            "structured_output": structured_output
-        }
+            return_code=result.returncode,
+            raw_output=combined_output,
+            raw_error=""  # Combined into raw_output for nikto
+        )
         
-        return JSONResponse(response)
+        return response
         
     except subprocess.TimeoutExpired:
         end_time = time.time()
         process_time_ms = int((end_time - start_time) * 1000)
         
-        response = {
-            "service": "nikto",
-            "process_time_ms": process_time_ms,
-            "target": target if 'target' in locals() else "unknown",
-            "arguments": {
+        response = ServiceResponse(
+            service="nikto",
+            process_time_ms=process_time_ms,
+            target=target if 'target' in locals() else "unknown",
+            arguments={
                 "scan_type": scan_type if 'scan_type' in locals() else "basic",
                 "port": port if 'port' in locals() else None,
                 "ssl": ssl if 'ssl' in locals() else False,
@@ -452,23 +445,22 @@ async def nikto_scan(request: Request) -> JSONResponse:
                 "plugins": plugins if 'plugins' in locals() else None,
                 "vhost": vhost if 'vhost' in locals() else None
             },
-            "return_code": -1,
-            "raw_output": "",
-            "raw_error": f"Command timed out after {timeout + 60} seconds",
-            "structured_output": {}
-        }
+            return_code=-1,
+            raw_output="",
+            raw_error=f"Command timed out after {timeout + 60} seconds"
+        )
         
-        return JSONResponse(response, status_code=408)
+        return response
         
     except Exception as e:
         end_time = time.time()
         process_time_ms = int((end_time - start_time) * 1000)
         
-        response = {
-            "service": "nikto",
-            "process_time_ms": process_time_ms,
-            "target": target if 'target' in locals() else "unknown",
-            "arguments": {
+        response = ServiceResponse(
+            service="nikto",
+            process_time_ms=process_time_ms,
+            target=target if 'target' in locals() else "unknown",
+            arguments={
                 "scan_type": scan_type if 'scan_type' in locals() else "basic",
                 "port": port if 'port' in locals() else None,
                 "ssl": ssl if 'ssl' in locals() else False,
@@ -477,22 +469,11 @@ async def nikto_scan(request: Request) -> JSONResponse:
                 "plugins": plugins if 'plugins' in locals() else None,
                 "vhost": vhost if 'vhost' in locals() else None
             },
-            "return_code": -1,
-            "raw_output": "",
-            "raw_error": str(e),
-            "structured_output": {}
-        }
+            return_code=-1,
+            raw_output="",
+            raw_error=str(e)
+        )
         
-        return JSONResponse(response, status_code=500)
+        return response
 
-@mcp.custom_route("/nikto", methods=["GET", "POST"])
-async def nikto_endpoint(request: Request) -> JSONResponse:
-    return await nikto_scan(request)
 
-@mcp.custom_route("/health", methods=["GET"])
-async def health_check(request: Request) -> PlainTextResponse:
-    return PlainTextResponse("OK")
-
-if __name__ == "__main__":
-    #mcp.run() stdio
-    mcp.run(transport="http", host="0.0.0.0", port=9007)

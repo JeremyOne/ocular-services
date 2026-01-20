@@ -1,10 +1,6 @@
 from typing import Optional
 import subprocess
-import re
-import json
-from fastmcp import FastMCP
-from starlette.requests import Request
-from starlette.responses import PlainTextResponse, JSONResponse
+from service_response import ServiceResponse
 
 # Usage
 #   curl [options] <URL>
@@ -23,9 +19,6 @@ from starlette.responses import PlainTextResponse, JSONResponse
 #   -s, --silent            Silent mode
 #   -o, --output            Write to file instead of stdout
 #   -w, --write-out         Use output format after completion
-
-# Create FastMCP server
-mcp = FastMCP("Curl Service")
 
 def get_service_info() -> dict:
     return {
@@ -66,92 +59,10 @@ def get_option_descriptions() -> list: [
     }
 ]
 
-def parse_curl_output(output: str, stderr: str, options_used: str) -> dict:
-    """Parse curl output into structured JSON format"""
-    result = {
-        "response_headers": {},
-        "response_body": "",
-        "http_status": None,
-        "content_type": None,
-        "content_length": None,
-        "server": None,
-        "location": None,
-        "timing": {},
-        "ssl_info": {},
-        "verbose_info": []
-    }
+async def curl_request(url: str, method: str = "GET", headers: str = "", data: str = "", 
+                       follow_redirects: bool = False, verbose: bool = False, insecure: bool = False, 
+                       user_agent: str = "", headers_only: bool = False) -> dict:
     
-    lines = output.strip().split('\n')
-    stderr_lines = stderr.strip().split('\n') if stderr else []
-    
-    # Parse HTTP status from verbose output or response
-    status_pattern = r'HTTP/[\d.]+\s+(\d+)'
-    for line in lines + stderr_lines:
-        match = re.search(status_pattern, line)
-        if match:
-            result["http_status"] = int(match.group(1))
-            break
-    
-    # Parse headers (from -I option or verbose output)
-    header_section = False
-    body_section = False
-    
-    for line in lines:
-        line = line.strip()
-        
-        # Detect header section
-        if line.startswith('HTTP/'):
-            header_section = True
-            body_section = False
-            continue
-        elif line == '' and header_section:
-            header_section = False
-            body_section = True
-            continue
-        
-        # Parse headers
-        if header_section and ':' in line:
-            key, value = line.split(':', 1)
-            key = key.strip().lower()
-            value = value.strip()
-            result["response_headers"][key] = value
-            
-            # Extract common headers
-            if key == 'content-type':
-                result["content_type"] = value
-            elif key == 'content-length':
-                result["content_length"] = int(value) if value.isdigit() else value
-            elif key == 'server':
-                result["server"] = value
-            elif key == 'location':
-                result["location"] = value
-        
-        # Collect body (if not headers-only request)
-        elif body_section:
-            result["response_body"] += line + '\n'
-    
-    # Parse verbose information from stderr
-    for line in stderr_lines:
-        line = line.strip()
-        if line.startswith('*') or line.startswith('>') or line.startswith('<'):
-            result["verbose_info"].append(line)
-        
-        # Parse SSL/TLS information
-        if 'SSL' in line or 'TLS' in line:
-            if 'SSL connection using' in line:
-                ssl_match = re.search(r'SSL connection using (.+)', line)
-                if ssl_match:
-                    result["ssl_info"]["cipher"] = ssl_match.group(1)
-            elif 'Server certificate:' in line:
-                result["ssl_info"]["has_certificate"] = True
-    
-    # Clean up response body
-    result["response_body"] = result["response_body"].strip()
-    
-    return result
-
-@mcp.custom_route("/curl", methods=["GET", "POST"])
-async def curl_request(request: Request) -> JSONResponse:
     """Make HTTP requests using curl for penetration testing and discovery.
         url: The target URL to request
         method: HTTP method (GET, POST, etc.)
@@ -168,34 +79,11 @@ async def curl_request(request: Request) -> JSONResponse:
     start_time = time.time()
     
     try:
-        # Get parameters from query string or JSON body
-        if request.method == "GET":
-            url = request.query_params.get("url")
-            method = request.query_params.get("method", "GET")
-            headers = request.query_params.get("headers", "")
-            data = request.query_params.get("data", "")
-            follow_redirects = request.query_params.get("follow_redirects", "false").lower() == "true"
-            verbose = request.query_params.get("verbose", "false").lower() == "true"
-            insecure = request.query_params.get("insecure", "false").lower() == "true"
-            user_agent = request.query_params.get("user_agent", "")
-            headers_only = request.query_params.get("headers_only", "false").lower() == "true"
-        else:  # POST
-            body = await request.json()
-            url = body.get("url")
-            method = body.get("method", "GET")
-            headers = body.get("headers", "")
-            data = body.get("data", "")
-            follow_redirects = body.get("follow_redirects", False)
-            verbose = body.get("verbose", False)
-            insecure = body.get("insecure", False)
-            user_agent = body.get("user_agent", "")
-            headers_only = body.get("headers_only", False)
+
         
         if not url:
-            return JSONResponse(
-                {"error": "url parameter is required"}, 
-                status_code=400
-            )
+            return {"error": "url parameter is required"}
+        
         
         # Build curl command
         cmd = ["curl"]
@@ -244,17 +132,16 @@ async def curl_request(request: Request) -> JSONResponse:
         
         raw_output = result.stdout if result.stdout else ""
         raw_error = result.stderr if result.stderr else ""
-        
-        # Parse the curl output into structured format
+
         options_used = " ".join(cmd[1:-1])  # All options except 'curl' and URL
-        structured_output = parse_curl_output(raw_output, raw_error, options_used)
+
         
         # Format response according to schema.json
-        response = {
-            "service": "curl",
-            "process_time_ms": process_time_ms,
-            "target": url,
-            "arguments": {
+        response = ServiceResponse(
+            service="curl",
+            process_time_ms=process_time_ms,
+            target=url,
+            arguments={
                 "method": method,
                 "headers": headers,
                 "data": data,
@@ -265,23 +152,22 @@ async def curl_request(request: Request) -> JSONResponse:
                 "headers_only": headers_only,
                 "options_used": options_used
             },
-            "return_code": result.returncode,
-            "raw_output": raw_output,
-            "raw_error": raw_error,
-            "structured_output": structured_output
-        }
+            return_code=result.returncode,
+            raw_output=raw_output,
+            raw_error=raw_error
+        )
         
-        return JSONResponse(response)
+        return response
         
     except Exception as e:
         end_time = time.time()
         process_time_ms = int((end_time - start_time) * 1000)
         
-        response = {
-            "service": "curl",
-            "process_time_ms": process_time_ms,
-            "target": url if 'url' in locals() else "unknown",
-            "arguments": {
+        response = ServiceResponse(
+            service="curl",
+            process_time_ms=process_time_ms,
+            target=url if 'url' in locals() else "unknown",
+            arguments={
                 "method": method if 'method' in locals() else "GET",
                 "headers": headers if 'headers' in locals() else "",
                 "data": data if 'data' in locals() else "",
@@ -292,18 +178,10 @@ async def curl_request(request: Request) -> JSONResponse:
                 "headers_only": headers_only if 'headers_only' in locals() else False,
                 "options_used": ""
             },
-            "return_code": -1,
-            "raw_output": "",
-            "raw_error": str(e),
-            "structured_output": {}
-        }
+            return_code=-1,
+            raw_output="",
+            raw_error=str(e)
+        )
         
-        return JSONResponse(response, status_code=500)
+        return response
 
-@mcp.custom_route("/health", methods=["GET"])
-async def health_check(request: Request) -> PlainTextResponse:
-    return PlainTextResponse("OK")
-
-if __name__ == "__main__":
-    # mcp.run() # stdio
-    mcp.run(transport="http", host="0.0.0.0", port=9001)

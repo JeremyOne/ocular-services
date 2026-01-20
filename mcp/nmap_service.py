@@ -2,9 +2,7 @@ from typing import Optional
 import subprocess
 import re
 import json
-from fastmcp import FastMCP
-from starlette.requests import Request
-from starlette.responses import PlainTextResponse, JSONResponse
+from service_response import ServiceResponse
 
 # nmap - Network Mapper version 7.94SVN
 # Network exploration tool and security / port scanner
@@ -16,9 +14,6 @@ from starlette.responses import PlainTextResponse, JSONResponse
 #   rdp: Scan for RDP vulnerabilities on port 3389 (-p 3389 --script rdp-*)
 #   aggressive: Aggressive scan with OS detection (-A -T4)
 #   vuln: Scan for CVE vulnerabilities (-Pn --script vuln)
-
-# Create FastMCP server
-mcp = FastMCP("Nmap Service")
 
 def get_service_info() -> dict:
     return {
@@ -35,7 +30,7 @@ def get_service_info() -> dict:
         }
     }
 
-def parse_nmap_output(output: str, target: str, scan_type: str) -> dict:
+
     """Parse nmap output into structured JSON format"""
     result = {
         "target": target,
@@ -191,7 +186,7 @@ def parse_nmap_output(output: str, target: str, scan_type: str) -> dict:
     
     return result
 
-async def nmap_scan(request: Request) -> JSONResponse:
+async def nmap_scan(request: Request):
     """Perform network scan using nmap.
     
     Parameters:
@@ -239,9 +234,14 @@ async def nmap_scan(request: Request) -> JSONResponse:
             scripts = body.get("scripts")
         
         if not target:
-            return JSONResponse(
-                {"error": "target parameter is required"}, 
-                status_code=400
+            return ServiceResponse(
+                service="nmap",
+                process_time_ms=0,
+                target="",
+                arguments={},
+                return_code=-1,
+                raw_output="",
+                raw_error="target parameter is required"
             )
         
         # Validate parameters
@@ -257,23 +257,22 @@ async def nmap_scan(request: Request) -> JSONResponse:
             end_time = time.time()
             process_time_ms = int((end_time - start_time) * 1000)
             
-            response = {
-                "service": "nmap",
-                "process_time_ms": process_time_ms,
-                "target": target,
-                "arguments": {
+            response = ServiceResponse(
+                service="nmap",
+                process_time_ms=process_time_ms,
+                target=target,
+                arguments={
                     "scan_type": scan_type,
                     "timeout": timeout,
                     "ports": ports,
                     "scripts": scripts
                 },
-                "return_code": -1,
-                "raw_output": "",
-                "raw_error": "nmap is not installed. Please install it with 'sudo apt-get install nmap'",
-                "structured_output": {}
-            }
+                return_code=-1,
+                raw_output="",
+                raw_error="nmap is not installed. Please install it with 'sudo apt-get install nmap'"
+            )
             
-            return JSONResponse(response, status_code=500)
+            return response
         
         # Map scan types to nmap options
         scan_options = {
@@ -323,80 +322,65 @@ async def nmap_scan(request: Request) -> JSONResponse:
         raw_output = result.stdout if result.stdout else ""
         raw_error = result.stderr if result.stderr else ""
         
-        # Parse the nmap output into structured format
-        structured_output = parse_nmap_output(raw_output, target, scan_type) if raw_output else {}
-        
         # Format response according to schema.json
-        response = {
-            "service": "nmap",
-            "process_time_ms": process_time_ms,
-            "target": target,
-            "arguments": {
+        response = ServiceResponse(
+            service="nmap",
+            process_time_ms=process_time_ms,
+            target=target,
+            arguments={
                 "scan_type": scan_type,
                 "timeout": timeout,
                 "ports": ports,
                 "scripts": scripts
             },
-            "return_code": result.returncode,
-            "raw_output": raw_output,
-            "raw_error": raw_error,
-            "structured_output": structured_output
-        }
+            return_code=result.returncode,
+            raw_output=raw_output,
+            raw_error=raw_error
+        )
         
-        return JSONResponse(response)
+        return response
         
     except subprocess.TimeoutExpired:
         end_time = time.time()
         process_time_ms = int((end_time - start_time) * 1000)
         
-        response = {
-            "service": "nmap",
-            "process_time_ms": process_time_ms,
-            "target": target if 'target' in locals() else "unknown",
-            "arguments": {
+        response = ServiceResponse(
+            service="nmap",
+            process_time_ms=process_time_ms,
+            target=target if 'target' in locals() else "unknown",
+            arguments={
                 "scan_type": scan_type if 'scan_type' in locals() else "fast",
                 "timeout": timeout if 'timeout' in locals() else 240,
                 "ports": ports if 'ports' in locals() else None,
                 "scripts": scripts if 'scripts' in locals() else None
             },
-            "return_code": -1,
-            "raw_output": "",
-            "raw_error": f"Command timed out after {timeout} seconds",
-            "structured_output": {}
-        }
+            return_code=-1,
+            raw_output="",
+            raw_error=f"Command timed out after {timeout} seconds"
+        )
         
-        return JSONResponse(response, status_code=408)
+        return response
         
     except Exception as e:
         end_time = time.time()
         process_time_ms = int((end_time - start_time) * 1000)
         
-        response = {
-            "service": "nmap",
-            "process_time_ms": process_time_ms,
-            "target": target if 'target' in locals() else "unknown",
-            "arguments": {
+        response = ServiceResponse(
+            service="nmap",
+            process_time_ms=process_time_ms,
+            target=target if 'target' in locals() else "unknown",
+            arguments={
                 "scan_type": scan_type if 'scan_type' in locals() else "fast",
                 "timeout": timeout if 'timeout' in locals() else 240,
                 "ports": ports if 'ports' in locals() else None,
                 "scripts": scripts if 'scripts' in locals() else None
             },
-            "return_code": -1,
-            "raw_output": "",
-            "raw_error": str(e),
-            "structured_output": {}
-        }
+            return_code=-1,
+            raw_output="",
+            raw_error=str(e)
+        )
         
-        return JSONResponse(response, status_code=500)
-
-@mcp.custom_route("/nmap", methods=["GET", "POST"])
-async def nmap_endpoint(request: Request) -> JSONResponse:
-    return await nmap_scan(request)
-
-@mcp.custom_route("/health", methods=["GET"])
-async def health_check(request: Request) -> PlainTextResponse:
-    return PlainTextResponse("OK")
+        return response
 
 if __name__ == "__main__":
-    #mcp.run() stdio
-    mcp.run(transport="http", host="0.0.0.0", port=9006)
+    pass

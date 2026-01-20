@@ -1,9 +1,7 @@
 from typing import Optional
 import subprocess
 import re
-from fastmcp import FastMCP
-from starlette.requests import Request
-from starlette.responses import PlainTextResponse, JSONResponse
+from service_response import ServiceResponse
 
 # nbtscan - NetBIOS name scanner version 1.7.2
 # Usage: nbtscan [options] <scan_range>
@@ -22,8 +20,6 @@ from starlette.responses import PlainTextResponse, JSONResponse
 #   -m retransmits  Number of retransmits (default 0)
 #   -f filename     Take IP addresses from file
 
-# Create FastMCP server
-mcp = FastMCP("NBTScan Service")
 
 def get_service_info() -> dict:
     return {
@@ -41,29 +37,9 @@ def get_service_info() -> dict:
         }
     }
 
-def parse_nbtscan_output(output: str, target: str) -> dict:
-    """Parse nbtscan output into structured JSON format matching schema.json"""
-    result = {
-        "target_range": target,
-        "discovered_hosts": [],
-        "statistics": {
-            "total_hosts_scanned": 0,
-            "responsive_hosts": 0,
-            "total_netbios_names": 0,
-            "unique_domains": [],
-            "unique_workgroups": []
-        },
-        "netbios_names": {
-            "computers": [],
-            "domains": [],
-            "services": [],
-            "users": []
-        },
-        "errors": []
-    }
     
     if not output.strip():
-        result["errors"].append("Empty nbtscan output")
+        result.raw_error = "Empty nbtscan output"
         return result
     
     lines = output.split('\n')
@@ -266,7 +242,9 @@ def get_netbios_name_type(suffix: str) -> str:
     }
     return name_types.get(suffix.upper(), f"Unknown Service (0x{suffix})")
 
-async def nbtscan_scan(request: Request) -> JSONResponse:
+async def nbtscan_scan(target: str, options: str = "basic", timeout: int = 1000, verbose: bool = False,
+                       retransmits: int = 0, use_local_port: bool = False) -> ServiceResponse:
+    
     """Perform NetBIOS name scan using nbtscan.
     
     Parameters:
@@ -295,65 +273,45 @@ async def nbtscan_scan(request: Request) -> JSONResponse:
     import time
     start_time = time.time()
     
+    response = ServiceResponse(
+        service="nbtscan",
+        target=target,
+        arguments={
+            "options": options,
+            "timeout": timeout,
+            "verbose": verbose,
+            "retransmits": retransmits,
+            "use_local_port": use_local_port
+        },
+        return_code=-1,
+        raw_output="",
+        raw_error=""
+    )
+
     try:
-        # Get parameters from query string or JSON body
-        if request.method == "GET":
-            target = request.query_params.get("target")
-            options = request.query_params.get("options", "basic")
-            timeout = int(request.query_params.get("timeout", 1000))
-            verbose = request.query_params.get("verbose", "false").lower() == "true"
-            retransmits = int(request.query_params.get("retransmits", 0))
-            use_local_port = request.query_params.get("use_local_port", "false").lower() == "true"
-        else:  # POST
-            body = await request.json()
-            target = body.get("target")
-            options = body.get("options", "basic")
-            timeout = body.get("timeout", 1000)
-            verbose = body.get("verbose", False)
-            retransmits = body.get("retransmits", 0)
-            use_local_port = body.get("use_local_port", False)
-        
+
         if not target:
-            return JSONResponse(
-                {"error": "target parameter is required"}, 
-                status_code=400
-            )
-        
-        # Validate parameters
+            response.raw_error = "target parameter is required"
+            return response
         if timeout < 100:
-            timeout = 100
+            response.raw_error = "timeout must be at least 100 milliseconds"
+            return response
         if timeout > 30000:  # 30 seconds max
-            timeout = 30000
+            response.raw_error = "timeout cannot exceed 30000 milliseconds"
+            return response
         if retransmits < 0:
-            retransmits = 0
+            response.raw_error = "retransmits cannot be negative"
+            return response
         if retransmits > 10:
-            retransmits = 10
+            response.raw_error = "retransmits cannot exceed 10"
+            return response
         
         # Check if nbtscan is installed
         try:
             subprocess.run(["which", "nbtscan"], check=True, capture_output=True)
         except subprocess.CalledProcessError:
-            end_time = time.time()
-            process_time_ms = int((end_time - start_time) * 1000)
-            
-            response = {
-                "service": "nbtscan",
-                "process_time_ms": process_time_ms,
-                "target": target,
-                "arguments": {
-                    "options": options,
-                    "timeout": timeout,
-                    "verbose": verbose,
-                    "retransmits": retransmits,
-                    "use_local_port": use_local_port
-                },
-                "return_code": -1,
-                "raw_output": "",
-                "raw_error": "nbtscan is not installed. Please install it with 'sudo apt-get install nbtscan'",
-                "structured_output": {}
-            }
-            
-            return JSONResponse(response, status_code=500)
+            response.raw_error = "nbtscan command not found. Please install nbtscan."            
+            return response
         
         # Map friendly option names to actual nbtscan parameters
         option_mapping = {
@@ -414,82 +372,31 @@ async def nbtscan_scan(request: Request) -> JSONResponse:
         raw_error = result.stderr if result.stderr else ""
         
         # Parse the nbtscan output into structured format
-        structured_output = parse_nbtscan_output(raw_output, target) if raw_output else {}
         
-        # Format response according to schema.json
-        response = {
-            "service": "nbtscan",
-            "process_time_ms": process_time_ms,
-            "target": target,
-            "arguments": {
-                "options": options,
-                "timeout": timeout,
-                "verbose": verbose,
-                "retransmits": retransmits,
-                "use_local_port": use_local_port
-            },
-            "return_code": result.returncode,
-            "raw_output": raw_output,
-            "raw_error": raw_error,
-            "structured_output": structured_output
-        }
         
-        return JSONResponse(response)
+        response.process_time_ms=process_time_ms
+        response.return_code=result.returncode
+        response.raw_output=raw_output
+        response.raw_error=raw_error
+        
+        return response
         
     except subprocess.TimeoutExpired:
         end_time = time.time()
         process_time_ms = int((end_time - start_time) * 1000)
         
-        response = {
-            "service": "nbtscan",
-            "process_time_ms": process_time_ms,
-            "target": target if 'target' in locals() else "unknown",
-            "arguments": {
-                "options": options if 'options' in locals() else "",
-                "timeout": timeout if 'timeout' in locals() else 1000,
-                "verbose": verbose if 'verbose' in locals() else False,
-                "retransmits": retransmits if 'retransmits' in locals() else 0,
-                "use_local_port": use_local_port if 'use_local_port' in locals() else False
-            },
-            "return_code": -1,
-            "raw_output": "",
-            "raw_error": "Command timed out after 60 seconds",
-            "structured_output": {}
-        }
+        response.process_time_ms=process_time_ms
+        response.raw_error="Command timed out"
         
-        return JSONResponse(response, status_code=408)
+        return response
         
     except Exception as e:
         end_time = time.time()
         process_time_ms = int((end_time - start_time) * 1000)
         
-        response = {
-            "service": "nbtscan",
-            "process_time_ms": process_time_ms,
-            "target": target if 'target' in locals() else "unknown",
-            "arguments": {
-                "options": options if 'options' in locals() else "",
-                "timeout": timeout if 'timeout' in locals() else 1000,
-                "verbose": verbose if 'verbose' in locals() else False,
-                "retransmits": retransmits if 'retransmits' in locals() else 0,
-                "use_local_port": use_local_port if 'use_local_port' in locals() else False
-            },
-            "return_code": -1,
-            "raw_output": "",
-            "raw_error": str(e),
-            "structured_output": {}
-        }
+        response.return_code=-1,
+        response.raw_output=""
+        response.raw_error=str(e)
         
-        return JSONResponse(response, status_code=500)
+        return response
 
-@mcp.custom_route("/nbtscan", methods=["GET", "POST"])
-async def nbtscan_endpoint(request: Request) -> JSONResponse:
-    return await nbtscan_scan(request)
-
-@mcp.custom_route("/health", methods=["GET"])
-async def health_check(request: Request) -> PlainTextResponse:
-    return PlainTextResponse("OK")
-
-if __name__ == "__main__":
-    #mcp.run() stdio
-    mcp.run(transport="http", host="0.0.0.0", port=9005)

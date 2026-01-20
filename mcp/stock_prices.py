@@ -1,10 +1,3 @@
-from mcp.server.fastmcp import FastMCP
-import yfinance as yf
-
-# Create an MCP server with a custom name
-mcp = FastMCP("Stock Price Server")
-
-@mcp.tool()
 def get_stock_price(symbol: str) -> float:
     """
     Retrieve the current stock price for the given ticker symbol.

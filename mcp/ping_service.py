@@ -1,7 +1,7 @@
 from typing import Optional
 import subprocess
 import re
-from starlette.responses import JSONResponse
+from service_response import ServiceResponse
 
 # Usage
 #   ping [options] <destination>
@@ -69,110 +69,7 @@ def get_service_info() -> dict:
         }
     }
 
-def parse_ping_output(output: str) -> dict:
-    """Parse ping output into structured JSON format matching schema.json"""
-    
-    result = {
-        "bytes": None,
-        "from": None,
-        "ttl": None,
-        "packets": [],
-        "errors": [],
-        "statistics": {
-            "packets_transmitted": 0,
-            "packets_received": 0,
-            "packet_loss_percent": 0,
-            "time_ms": 0,
-            "errors": 0,
-            "rtt": {
-                "min": 0.0,
-                "avg": 0.0,
-                "max": 0.0,
-                "mdev": 0.0
-            }
-        }
-    }
-    
-    lines = output.strip().split('\n')
-    
-    # Parse header line: PING 192.168.0.0 (192.168.0.0) 56(84) bytes of data.
-    header_pattern = r'PING\s+(\S+)\s+\(([^)]+)\)\s+(\d+)\((\d+)\)\s+bytes'
-    for line in lines:
-        match = re.search(header_pattern, line)
-        if match:
-            result["from"] = match.group(2)  # Target IP address
-            result["bytes"] = int(match.group(3))  # Data bytes
-            break
-    
-    # Parse successful ping responses
-    ping_pattern = r'(\d+)\s+bytes\s+from\s+([^:]+):\s+icmp_seq=(\d+)\s+ttl=(\d+)\s+time=([0-9.]+)\s+ms'
-    for line in lines:
-        match = re.search(ping_pattern, line)
-        if match:
-            # Store TTL from first successful packet
-            if result["ttl"] is None:
-                result["ttl"] = int(match.group(4))
-            
-            packet = {
-                "sequence": int(match.group(3)),
-                "time_ms": float(match.group(5)),
-                "status": "success"
-            }
-            result["packets"].append(packet)
-    
-    # Parse error responses (Destination Host Unreachable, etc.)
-    error_pattern = r'From\s+([^:]+)\s+icmp_seq=(\d+)\s+(.+)'
-    for line in lines:
-        match = re.search(error_pattern, line)
-        if match:
-            error_entry = {
-                "sequence": int(match.group(2)),
-                "error_message": match.group(3).strip(),
-                "from": match.group(1),
-                "status": "error"
-            }
-            result["errors"].append(error_entry)
-            
-            # Also add to packets array for consistency
-            packet = {
-                "sequence": int(match.group(2)),
-                "time_ms": None,
-                "status": "error",
-                "error": match.group(3).strip()
-            }
-            result["packets"].append(packet)
-    
-    # Parse statistics line with error handling
-    # Format: 5 packets transmitted, 0 received, +5 errors, 100% packet loss, time 4110ms
-    stats_pattern = r'(\d+)\s+packets\s+transmitted,\s+(\d+)\s+received(?:,\s+\+(\d+)\s+errors)?,\s+([0-9.]+)%\s+packet\s+loss,\s+time\s+(\d+)ms'
-    for line in lines:
-        match = re.search(stats_pattern, line)
-        if match:
-            result["statistics"]["packets_transmitted"] = int(match.group(1))
-            result["statistics"]["packets_received"] = int(match.group(2))
-            result["statistics"]["errors"] = int(match.group(3)) if match.group(3) else 0
-            result["statistics"]["packet_loss_percent"] = float(match.group(4))
-            result["statistics"]["time_ms"] = int(match.group(5))
-            break
-    
-    # Parse RTT line (only available if there were successful responses)
-    rtt_pattern = r'rtt\s+min/avg/max/mdev\s+=\s+([0-9.]+)/([0-9.]+)/([0-9.]+)/([0-9.]+)\s+ms'
-    for line in lines:
-        match = re.search(rtt_pattern, line)
-        if match:
-            result["statistics"]["rtt"]["min"] = float(match.group(1))
-            result["statistics"]["rtt"]["avg"] = float(match.group(2))
-            result["statistics"]["rtt"]["max"] = float(match.group(3))
-            result["statistics"]["rtt"]["mdev"] = float(match.group(4))
-            break
-    
-    # Sort packets by sequence number for consistency
-    result["packets"].sort(key=lambda x: x["sequence"])
-    
-    return result
- 
-
-async def ping_host(host: str, count: int = 5, interval: float = 1.0, packet_size: int = 56) -> JSONResponse:
+async def ping_host(host: str, count: int = 5, interval: float = 1.0, packet_size: int = 56) -> dict:
     """Ping a host to test network connectivity.
         host: The hostname or IP address to ping
         count: Number of ping packets to send (default: 5)
@@ -185,30 +82,18 @@ async def ping_host(host: str, count: int = 5, interval: float = 1.0, packet_siz
     
     try:
         
-        if not host:
-            return JSONResponse(
-                {"error": "host parameter is required"}, 
-                status_code=400
-            )
-        
         # Validate parameters
+        if not host:
+            return {"error": "host parameter is required"}
+                
         if count < 1 or count > 99:
-            return JSONResponse(
-                {"error": "count must be between 1 and 99"}, 
-                status_code=400
-            )
+            return {"error": "count must be between 1 and 99"}
         
         if interval < 0.01 or interval > 5:
-            return JSONResponse(
-                {"error": "interval must be between 0.01 and 5 seconds"}, 
-                status_code=400
-            )
+            return {"error": "interval must be between 0.01 and 5 seconds"}
         
         if packet_size < 1 or packet_size > 65524:
-            return JSONResponse(
-                {"error": "packet_size must be between 1 and 65524"}, 
-                status_code=400
-            )
+            return {"error": "packet_size must be between 1 and 65524"}
 
         result = subprocess.run(
             ["ping", 
@@ -225,44 +110,91 @@ async def ping_host(host: str, count: int = 5, interval: float = 1.0, packet_siz
         raw_output = result.stdout if result.stdout else ""
         raw_error = result.stderr if result.stderr else ""
         
-        # Parse the ping output into structured format
-        structured_output = parse_ping_output(raw_output) if success and raw_output else {}
-        
         # Format response according to schema.json
-        response = {
-            "service": "ping",
-            "process_time_ms": process_time_ms,
-            "target": host,
-            "arguments": {
+        response = ServiceResponse(
+            service="ping",
+            process_time_ms=process_time_ms,
+            target=host,
+            arguments={
                 "count": count,
                 "interval": interval,
                 "packet_size": packet_size
             },
-            "return_code": result.returncode,
-            "raw_output": raw_output,
-            "raw_error": raw_error,
-            "structured_output": structured_output
-        }
+            return_code=result.returncode,
+            raw_output=raw_output,
+            raw_error=raw_error
+        )
         
-        return JSONResponse(response)
+        return response
         
     except Exception as e:
         end_time = time.time()
         process_time_ms = int((end_time - start_time) * 1000)
         
-        response = {
-            "service": "ping",
-            "process_time_ms": process_time_ms,
-            "target": host if 'host' in locals() else "unknown",
-            "arguments": {
+        response = ServiceResponse(
+            service="ping",
+            process_time_ms=process_time_ms,
+            target=host if 'host' in locals() else "unknown",
+            arguments={
                 "count": count if 'count' in locals() else 0,
                 "interval": interval if 'interval' in locals() else 0,
                 "packet_size": packet_size if 'packet_size' in locals() else 0
             },
-            "return_code": -1,
-            "raw_output": "",
-            "raw_error": str(e),
-            "structured_output": {}
-        }
+            return_code=-1,
+            raw_output="",
+            raw_error=str(e)
+        )
         
-        return JSONResponse(response, status_code=500)
+        return response
+
+
+async def ping_host_raw(host: str, count: int = 5, interval: float = 0.25, packet_size: int = 56) -> str:
+    """Ping a host to test network connectivity.
+        host: The hostname or IP address to ping
+        count: Number of ping packets to send (default: 5)
+        Max: 65524
+    Returns:
+        JSON response matching schema.json format
+    """
+    import time
+    start_time = time.time()
+    
+    try:
+        
+        if not host:
+            return "error: host parameter is required"
+        
+        # Validate parameters
+        if count < 1 or count > 99:
+            return "error: count must be between 1 and 99"
+        
+        if interval < 0.01 or interval > 5:
+            return "error: interval must be between 0.01 and 5 seconds"
+        
+        if packet_size < 1 or packet_size > 65524:
+            return "error: packet_size must be between 1 and 65524"
+        
+        result = subprocess.run(
+            ["ping", 
+            "-c", str(count), 
+            "-i", str(interval), 
+            "-s", str(packet_size), 
+            host
+            ], capture_output=True, text=True, timeout=60)
+        
+        end_time = time.time()
+        process_time_ms = int((end_time - start_time) * 1000)
+        
+        success = result.returncode == 0
+        raw_output = result.stdout if result.stdout else ""
+        raw_error = result.stderr if result.stderr else ""
+        
+        return (raw_output if success else raw_error)
+        
+    except Exception as e:
+        end_time = time.time()
+        process_time_ms = int((end_time - start_time) * 1000)
+        
+        response = "Process_time_ms: " + str(process_time_ms) + "\n" + "Error: " + str(e)
+        
+        return response

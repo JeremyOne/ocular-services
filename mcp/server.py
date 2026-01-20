@@ -8,12 +8,13 @@ import requests
 import logging
 from fastmcp import FastMCP
 from fastmcp.client.logging import LogMessage
+from mcp.curl_service import curl_request
 from starlette.requests import Request
 from starlette.responses import PlainTextResponse, JSONResponse
 
 
 import ping_service as ping_service_module
-#import curl_service as curl_service_module  
+import curl_service as curl_service_module  
 #import datetime_service as datetime_service_module
 #import dns_service as dns_service_module
 ## import enum4linux_service as enum4linux_service_module
@@ -24,8 +25,9 @@ import ping_service as ping_service_module
 #import nmap_service as nmap_service_module
 #import nikto_service as nikto_service_module
 
-from ping_service import ping_host
-#from curl_service import curl_request
+from ping_service import ping_host, ping_host_raw
+from datetime import datetime, timezone
+from curl_service import curl_request
 #from datetime_service import get_datetime
 #from dns_service import dns_lookup_service
 ##from enum4linux_service import enum4linux_scan
@@ -61,12 +63,42 @@ mcp = FastMCP(
         name="ping",
         description="Network connectivity testing using ICMP ping."
     )
-async def ping_service(host: str, count: int = 5, interval: float = 1.0, packet_size: int = 56) -> JSONResponse:
-    return await JSONResponse(ping_host(host, count, interval, packet_size))
+async def ping_service(host: str, count: int = 5, interval: float = 1.0, packet_size: int = 56, AsJson: bool = False) -> str:
+    if AsJson:
+        result = await ping_host(host, count, interval, packet_size)
+        return json.dumps(result)
+    else:
+        result = await ping_host_raw(host, count, interval, packet_size)
+        return result
 
-#@mcp.tool("/curl")
-#async def curl_service(request: Request) -> JSONResponse:
-#    return await curl_request(request)
+@mcp.tool(
+        name="time",
+        description="Get the current date and time from the server."
+    )
+async def time_service(InUTC: bool, AsJson: bool) -> str:
+    if AsJson:
+        if InUTC:
+            return json.dumps({"datetime": datetime.now(timezone.utc).isoformat()})
+        else:
+            return json.dumps({"datetime": datetime.now().isoformat()})
+    else:
+        if InUTC:
+            return datetime.now(timezone.utc).isoformat()
+        else:
+            return datetime.now().isoformat()
+
+
+@mcp.tool(
+        name="/curl",
+        description="Make HTTP requests using curl for penetration testing and discovery."
+        )
+async def curl_service(url: str, method: str = "GET", headers: str = "", data: str = "", 
+                       follow_redirects: bool = False, verbose: bool = False, insecure: bool = False, 
+                       user_agent: str = "", headers_only: bool = False, asJson: bool = False) -> dict:
+    
+    result = await curl_request(url, method, headers, data, follow_redirects, verbose, insecure, user_agent, headers_only)
+    return result
+
 #
 #@mcp.tool("/datetime")
 #async def datetime_service(request: Request) -> JSONResponse:

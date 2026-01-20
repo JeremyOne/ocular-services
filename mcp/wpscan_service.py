@@ -3,9 +3,7 @@ import subprocess
 import json
 import os
 import tempfile
-from fastmcp import FastMCP
-from starlette.requests import Request
-from starlette.responses import PlainTextResponse, JSONResponse
+from service_response import ServiceResponse
 
 # wpscan - WordPress Security Scanner
 # Usage: wpscan --url URL [options]
@@ -23,9 +21,6 @@ from starlette.responses import PlainTextResponse, JSONResponse
 #   --threads           Number of threads to use
 #   --throttle          Milliseconds to wait between requests
 
-# Create FastMCP server
-mcp = FastMCP("WPScan Service")
-
 def get_service_info() -> dict:
     return {
         "name": "wpscan",
@@ -42,7 +37,7 @@ def get_service_info() -> dict:
         }
     }
 
-def parse_wpscan_output(json_output: str, target_url: str) -> dict:
+
     """Parse wpscan JSON output into structured JSON format matching schema.json"""
     result = {
         "target_info": {
@@ -263,8 +258,7 @@ def parse_wpscan_output(json_output: str, target_url: str) -> dict:
     
     return result
 
-@mcp.custom_route("/wpscan", methods=["GET", "POST"])
-async def wpscan_scan(request: Request) -> JSONResponse:
+async def wpscan_scan(request):
     """Perform WordPress security scan using WPScan.
     
     Parameters:
@@ -309,9 +303,14 @@ async def wpscan_scan(request: Request) -> JSONResponse:
             random_user_agent = body.get("random_user_agent", False)
         
         if not url:
-            return JSONResponse(
-                {"error": "url parameter is required"}, 
-                status_code=400
+            return ServiceResponse(
+                service="wpscan",
+                process_time_ms=0,
+                target="",
+                arguments={},
+                return_code=-1,
+                raw_output="",
+                raw_error="url parameter is required"
             )
         
         # Ensure URL has protocol
@@ -331,23 +330,22 @@ async def wpscan_scan(request: Request) -> JSONResponse:
             end_time = time.time()
             process_time_ms = int((end_time - start_time) * 1000)
             
-            response = {
-                "service": "wpscan",
-                "process_time_ms": process_time_ms,
-                "target": url,
-                "arguments": {
+            response = ServiceResponse(
+                service="wpscan",
+                process_time_ms=process_time_ms,
+                target=url,
+                arguments={
                     "options": options,
                     "timeout": timeout,
                     "force": force,
                     "random_user_agent": random_user_agent
                 },
-                "return_code": -1,
-                "raw_output": "",
-                "raw_error": "wpscan is not installed. Please install it with 'gem install wpscan'",
-                "structured_output": {}
-            }
+                return_code=-1,
+                raw_output="",
+                raw_error="wpscan is not installed. Please install it with 'gem install wpscan'"
+            )
             
-            return JSONResponse(response, status_code=500)
+            return response
         
         # Map friendly option names to actual wpscan parameters
         option_mapping = {
@@ -407,32 +405,24 @@ async def wpscan_scan(request: Request) -> JSONResponse:
             raw_output = result.stdout if result.stdout else ""
             raw_error = result.stderr if result.stderr else ""
             
-            # Read JSON output if file exists
-            structured_output = {}
-            if os.path.exists(output_file) and os.path.getsize(output_file) > 0:
-                with open(output_file, "r") as f:
-                    json_output = f.read()
-                structured_output = parse_wpscan_output(json_output, url)
-            
             # Format response according to schema.json
-            response = {
-                "service": "wpscan",
-                "process_time_ms": process_time_ms,
-                "target": url,
-                "arguments": {
+            response = ServiceResponse(
+                service="wpscan",
+                process_time_ms=process_time_ms,
+                target=url,
+                arguments={
                     "options": options,
                     "timeout": timeout,
                     "force": force,
                     "random_user_agent": random_user_agent,
                     "api_token_provided": bool(api_token)
                 },
-                "return_code": result.returncode,
-                "raw_output": raw_output,
-                "raw_error": raw_error,
-                "structured_output": structured_output
-            }
+                return_code=result.returncode,
+                raw_output=raw_output,
+                raw_error=raw_error
+            )
             
-            return JSONResponse(response)
+            return response
             
         finally:
             # Clean up temporary file
@@ -443,52 +433,45 @@ async def wpscan_scan(request: Request) -> JSONResponse:
         end_time = time.time()
         process_time_ms = int((end_time - start_time) * 1000)
         
-        response = {
-            "service": "wpscan",
-            "process_time_ms": process_time_ms,
-            "target": url if 'url' in locals() else "unknown",
-            "arguments": {
+        response = ServiceResponse(
+            service="wpscan",
+            process_time_ms=process_time_ms,
+            target=url if 'url' in locals() else "unknown",
+            arguments={
                 "options": options if 'options' in locals() else "",
                 "timeout": timeout if 'timeout' in locals() else 300,
                 "force": force if 'force' in locals() else False,
                 "random_user_agent": random_user_agent if 'random_user_agent' in locals() else False,
                 "api_token_provided": bool(api_token) if 'api_token' in locals() else False
             },
-            "return_code": -1,
-            "raw_output": "",
-            "raw_error": f"Command timed out after {timeout} seconds",
-            "structured_output": {}
-        }
+            return_code=-1,
+            raw_output="",
+            raw_error=f"Command timed out after {timeout} seconds"
+        )
         
-        return JSONResponse(response, status_code=408)
+        return response
         
     except Exception as e:
         end_time = time.time()
         process_time_ms = int((end_time - start_time) * 1000)
         
-        response = {
-            "service": "wpscan",
-            "process_time_ms": process_time_ms,
-            "target": url if 'url' in locals() else "unknown",
-            "arguments": {
+        response = ServiceResponse(
+            service="wpscan",
+            process_time_ms=process_time_ms,
+            target=url if 'url' in locals() else "unknown",
+            arguments={
                 "options": options if 'options' in locals() else "",
                 "timeout": timeout if 'timeout' in locals() else 300,
                 "force": force if 'force' in locals() else False,
                 "random_user_agent": random_user_agent if 'random_user_agent' in locals() else False,
                 "api_token_provided": bool(api_token) if 'api_token' in locals() else False
             },
-            "return_code": -1,
-            "raw_output": "",
-            "raw_error": str(e),
-            "structured_output": {}
-        }
+            return_code=-1,
+            raw_output="",
+            raw_error=str(e)
+        )
         
-        return JSONResponse(response, status_code=500)
-
-@mcp.custom_route("/health", methods=["GET"])
-async def health_check(request: Request) -> PlainTextResponse:
-    return PlainTextResponse("OK")
+        return response
 
 if __name__ == "__main__":
-    #mcp.run() stdio
-    mcp.run(transport="http", host="0.0.0.0", port=9003)
+    pass
