@@ -1,6 +1,5 @@
 from typing import Optional
 import subprocess
-import re
 from service_response import ServiceResponse
 
 # Usage
@@ -77,124 +76,62 @@ async def ping_host(host: str, count: int = 5, interval: float = 1.0, packet_siz
     Returns:
         JSON response matching schema.json format
     """
-    import time
-    start_time = time.time()
+
+    # Initialize ServiceResponse
+    response = ServiceResponse(
+        service="ping",
+        target=host,
+        arguments={
+            "host": host,
+            "count": count,
+            "interval": interval,
+            "packet_size": packet_size
+        }
+    )
     
     try:
         
         # Validate parameters
         if not host:
-            return {"error": "host parameter is required"}
+            response.add_error("host parameter is required")
+            return response
                 
         if count < 1 or count > 99:
-            return {"error": "count must be between 1 and 99"}
+            response.add_error("count must be between 1 and 99")
+            return response
         
         if interval < 0.01 or interval > 5:
-            return {"error": "interval must be between 0.01 and 5 seconds"}
+            response.add_error("interval must be between 0.01 and 5 seconds")
+            return response
         
         if packet_size < 1 or packet_size > 65524:
-            return {"error": "packet_size must be between 1 and 65524"}
+            response.add_error("packet_size must be between 1 and 65524")
+            return response
 
+        # Build command
+        cmd = ["ping", "-c", str(count), "-i", str(interval), "-s", str(packet_size), host]
+        
+        response.raw_command = " ".join(cmd)
+        
+        # Execute command
         result = subprocess.run(
-            ["ping", 
-            "-c", str(count), 
-            "-i", str(interval), 
-            "-s", str(packet_size), 
-            host
-            ], capture_output=True, text=True, timeout=60)
-        
-        end_time = time.time()
-        process_time_ms = int((end_time - start_time) * 1000)
-        
-        success = result.returncode == 0
-        raw_output = result.stdout if result.stdout else ""
-        raw_error = result.stderr if result.stderr else ""
-        
-        # Format response according to schema.json
-        response = ServiceResponse(
-            service="ping",
-            process_time_ms=process_time_ms,
-            target=host,
-            arguments={
-                "count": count,
-                "interval": interval,
-                "packet_size": packet_size
-            },
-            return_code=result.returncode,
-            raw_output=raw_output,
-            raw_error=raw_error
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=60
         )
+        
+        response.raw_output = result.stdout if result.stdout else ""
+        response.raw_error = result.stderr if result.stderr else ""
+        response.return_code = result.returncode
+        response.end_process_timer()
         
         return response
         
     except Exception as e:
-        end_time = time.time()
-        process_time_ms = int((end_time - start_time) * 1000)
         
-        response = ServiceResponse(
-            service="ping",
-            process_time_ms=process_time_ms,
-            target=host if 'host' in locals() else "unknown",
-            arguments={
-                "count": count if 'count' in locals() else 0,
-                "interval": interval if 'interval' in locals() else 0,
-                "packet_size": packet_size if 'packet_size' in locals() else 0
-            },
-            return_code=-1,
-            raw_output="",
-            raw_error=str(e)
-        )
-        
+        response.raw_error = str(e)
+        response.return_code = None
+        response.end_process_timer()
         return response
 
-
-async def ping_host_raw(host: str, count: int = 5, interval: float = 0.25, packet_size: int = 56) -> str:
-    """Ping a host to test network connectivity.
-        host: The hostname or IP address to ping
-        count: Number of ping packets to send (default: 5)
-        Max: 65524
-    Returns:
-        JSON response matching schema.json format
-    """
-    import time
-    start_time = time.time()
-    
-    try:
-        
-        if not host:
-            return "error: host parameter is required"
-        
-        # Validate parameters
-        if count < 1 or count > 99:
-            return "error: count must be between 1 and 99"
-        
-        if interval < 0.01 or interval > 5:
-            return "error: interval must be between 0.01 and 5 seconds"
-        
-        if packet_size < 1 or packet_size > 65524:
-            return "error: packet_size must be between 1 and 65524"
-        
-        result = subprocess.run(
-            ["ping", 
-            "-c", str(count), 
-            "-i", str(interval), 
-            "-s", str(packet_size), 
-            host
-            ], capture_output=True, text=True, timeout=60)
-        
-        end_time = time.time()
-        process_time_ms = int((end_time - start_time) * 1000)
-        
-        success = result.returncode == 0
-        raw_output = result.stdout if result.stdout else ""
-        raw_error = result.stderr if result.stderr else ""
-        
-        return (raw_output if success else raw_error)
-        
-    except Exception as e:
-        end_time = time.time()
-        process_time_ms = int((end_time - start_time) * 1000)
-        
-        response = "Process_time_ms: " + str(process_time_ms) + "\n" + "Error: " + str(e)
-        
-        return response

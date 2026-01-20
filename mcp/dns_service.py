@@ -1,5 +1,4 @@
 from typing import Optional, List
-import time
 import dns.resolver
 import dns.exception
 from service_response import ServiceResponse
@@ -100,36 +99,49 @@ async def dns_lookup(host: str, record_types: Optional[str] = "A,TXT", timeout: 
     Returns:
         JSON response matching schema.json format with DNS information
     """
-    start_time = time.time()
+
+    # Parse record types
+    if isinstance(record_types, str):
+        record_types_list = [rt.strip().upper() for rt in record_types.split(",")]
+    else:
+        record_types_list = record_types
+    
+    # Initialize ServiceResponse
+    response = ServiceResponse(
+        service="dns",
+        target=host,
+        arguments={
+            "host": host,
+            "record_types": record_types_list,
+            "timeout": timeout
+        }
+    )
     
     try:
-        # Get parameters from query string or JSON body
+        
+        # Validate parameters
         if not host:
-            return {"error": "host parameter is required"}
+            response.add_error("host parameter is required")
+            return response
         
-        # Parse record types
-        if isinstance(record_types, str):
-            record_types = [rt.strip().upper() for rt in record_types.split(",")]
-        
-        # Validate timeout
         if timeout < 1:
-            return {"error": "timeout must be at least 1 second"}
-        elif timeout > 30:
-            return {"error": "timeout cannot exceed 30 seconds"}
+            response.add_error("timeout must be at least 1 second")
+            return response
+        
+        if timeout > 30:
+            response.add_error("timeout cannot exceed 30 seconds")
+            return response
         
         # Set DNS resolver timeout
         dns.resolver.default_resolver.timeout = timeout
         dns.resolver.default_resolver.lifetime = timeout
         
         # Perform DNS lookup
-        lookup_results = dns_lookup_mcp(host, record_types)
-        
-        end_time = time.time()
-        process_time_ms = int((end_time - start_time) * 1000)
+        lookup_results = dns_lookup_mcp(host, record_types_list)
         
         # Create raw output summary
         raw_output_lines = []
-        for record_type in record_types:
+        for record_type in record_types_list:
             record_key = f"{record_type.lower()}_records"
             if record_key in lookup_results and lookup_results[record_key]:
                 raw_output_lines.append(f"{record_type} records for {host}:")
@@ -140,37 +152,16 @@ async def dns_lookup(host: str, record_types: Optional[str] = "A,TXT", timeout: 
         
         raw_output = "\n".join(raw_output_lines)
         
-        # Format response according to schema.json
-        response = ServiceResponse(
-            service="dns",
-            process_time_ms=process_time_ms,
-            target=host,
-            arguments={
-                "record_types": record_types,
-                "timeout": timeout
-            },
-            return_code=0,
-            raw_output=raw_output,
-            raw_error=""
-        )
+        response.raw_output = raw_output
+        response.raw_command = f"dns.resolver.resolve({host}, types={record_types_list})"
+        response.return_code = 0
+        response.end_process_timer()
         
         return response
         
     except Exception as e:
-        end_time = time.time()
-        process_time_ms = int((end_time - start_time) * 1000)
         
-        response = ServiceResponse(
-            service="dns",
-            process_time_ms=process_time_ms,
-            target=host if 'host' in locals() else "unknown",
-            arguments={
-                "record_types": record_types if 'record_types' in locals() else ["A", "TXT"],
-                "timeout": timeout if 'timeout_param' in locals() else 5
-            },
-            return_code=-1,
-            raw_output="",
-            raw_error=str(e)
-        )
-        
+        response.raw_error = str(e)
+        response.return_code = None
+        response.end_process_timer()
         return response

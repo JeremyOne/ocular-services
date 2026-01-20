@@ -22,9 +22,12 @@ class ServiceResponse:
         raw_error: Raw stderr from the service
     """
     service: str
+    process_start_time: datetime = field(default_factory=datetime.utcnow)
     process_time_ms: int
+    process_end_time: datetime
     target: str
     arguments: Dict[str, Any] = field(default_factory=dict)
+    raw_command: str = ""
     return_code: int = 0
     raw_output: str = ""
     raw_error: str = ""
@@ -39,10 +42,11 @@ class ServiceResponse:
         """
         return {
             "service": self.service,
-            "process_time_ms": self.process_time_ms,
+            "process_start_time": self.process_start_time,
             "target": self.target,
             "arguments": self.arguments,
             "return_code": self.return_code,
+            "raw_command": self.raw_command,
             "raw_output": self.raw_output,
             "raw_error": self.raw_error
         }
@@ -60,11 +64,13 @@ class ServiceResponse:
         """
         return cls(
             service=data.get("service", ""),
+            process_start_time=data.get("process_start_time", datetime.utcnow()),
             process_time_ms=data.get("process_time_ms", 0),
+            process_end_time=data.get("process_end_time", datetime.utcnow()),
             target=data.get("target", ""),
             arguments=data.get("arguments", {}),
             return_code=data.get("return_code", 0),
-            raw_output=data.get("raw_output", ""),
+            raw_command=data.get("raw_command", ""),
             raw_error=data.get("raw_error", ""),
             structured_output=data.get("structured_output", {})
         )
@@ -86,24 +92,29 @@ class ServiceResponse:
             True if raw_error contains data or return_code is non-zero
         """
         return bool(self.raw_error) or self.return_code != 0
-    
-    def get_statistics(self) -> Optional[Dict[str, Any]]:
+
+    def end_process_timer(self):
         """
-        Retrieve statistics from the structured output.
-        
-        Returns:
-            Statistics dictionary if present, None otherwise
+        Set the process end time to current time and calculate process_time_ms.
         """
-        return self.structured_output.get("statistics")
-    
-    def set_statistics(self, statistics: Dict[str, Any]) -> None:
+        self.process_end_time = datetime.utcnow()
+        self.process_time_ms = int((self.process_end_time - self.process_start_time).total_seconds() * 1000)
+
+    def add_error(self, error_message: str, return_code: Optional[int] = None):
         """
-        Set statistics in the structured output.
+        Append an error message to the raw_error field.
         
         Args:
-            statistics: Dictionary containing statistics data
+            error_message: The error message to append
+            return_code: Optional return code to set
         """
-        self.structured_output["statistics"] = statistics
+        if return_code is not None:
+            self.return_code = return_code
+        if self.raw_error:
+            self.raw_error += "\n"
+        self.raw_error += error_message
+
+        self.end_process_timer()
     
     def __repr__(self) -> str:
         """String representation of the ServiceResponse."""

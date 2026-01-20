@@ -75,17 +75,32 @@ async def curl_request(url: str, method: str = "GET", headers: str = "", data: s
     Returns:
         JSON response matching schema.json format
     """
-    import time
-    start_time = time.time()
-    
-    try:
 
+    # Initialize ServiceResponse
+    response = ServiceResponse(
+        service="curl",
+        target=url,
+        arguments={
+            "url": url,
+            "method": method,
+            "headers": headers,
+            "data": data,
+            "follow_redirects": follow_redirects,
+            "verbose": verbose,
+            "insecure": insecure,
+            "user_agent": user_agent,
+            "headers_only": headers_only
+        }
+    )
         
+    try:
+        
+        # Validate parameters
         if not url:
-            return {"error": "url parameter is required"}
+            response.add_error("url parameter is required")
+            return response
         
-        
-        # Build curl command
+        # Build command
         cmd = ["curl"]
         
         # Add options based on parameters
@@ -119,6 +134,8 @@ async def curl_request(url: str, method: str = "GET", headers: str = "", data: s
         # Add URL
         cmd.append(url)
         
+        response.raw_command = " ".join(cmd)
+        
         # Execute curl command
         result = subprocess.run(
             cmd,
@@ -127,61 +144,16 @@ async def curl_request(url: str, method: str = "GET", headers: str = "", data: s
             timeout=30
         )
         
-        end_time = time.time()
-        process_time_ms = int((end_time - start_time) * 1000)
-        
-        raw_output = result.stdout if result.stdout else ""
-        raw_error = result.stderr if result.stderr else ""
-
-        options_used = " ".join(cmd[1:-1])  # All options except 'curl' and URL
-
-        
-        # Format response according to schema.json
-        response = ServiceResponse(
-            service="curl",
-            process_time_ms=process_time_ms,
-            target=url,
-            arguments={
-                "method": method,
-                "headers": headers,
-                "data": data,
-                "follow_redirects": follow_redirects,
-                "verbose": verbose,
-                "insecure": insecure,
-                "user_agent": user_agent,
-                "headers_only": headers_only,
-                "options_used": options_used
-            },
-            return_code=result.returncode,
-            raw_output=raw_output,
-            raw_error=raw_error
-        )
+        response.raw_output = result.stdout if result.stdout else ""
+        response.raw_error = result.stderr if result.stderr else ""
+        response.return_code = result.returncode
+        response.end_process_timer()
         
         return response
         
     except Exception as e:
-        end_time = time.time()
-        process_time_ms = int((end_time - start_time) * 1000)
         
-        response = ServiceResponse(
-            service="curl",
-            process_time_ms=process_time_ms,
-            target=url if 'url' in locals() else "unknown",
-            arguments={
-                "method": method if 'method' in locals() else "GET",
-                "headers": headers if 'headers' in locals() else "",
-                "data": data if 'data' in locals() else "",
-                "follow_redirects": follow_redirects if 'follow_redirects' in locals() else False,
-                "verbose": verbose if 'verbose' in locals() else False,
-                "insecure": insecure if 'insecure' in locals() else False,
-                "user_agent": user_agent if 'user_agent' in locals() else "",
-                "headers_only": headers_only if 'headers_only' in locals() else False,
-                "options_used": ""
-            },
-            return_code=-1,
-            raw_output="",
-            raw_error=str(e)
-        )
-        
+        response.raw_error = str(e)
+        response.return_code = None
+        response.end_process_timer()       
         return response
-

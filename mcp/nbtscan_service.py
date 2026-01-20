@@ -1,6 +1,5 @@
 from typing import Optional
 import subprocess
-import re
 from service_response import ServiceResponse
 
 # nbtscan - NetBIOS name scanner version 1.7.2
@@ -270,47 +269,50 @@ async def nbtscan_scan(target: str, options: str = "basic", timeout: int = 1000,
     Returns:
         JSON response matching schema.json format
     """
-    import time
-    start_time = time.time()
-    
+
+    # Initialize ServiceResponse
     response = ServiceResponse(
         service="nbtscan",
         target=target,
         arguments={
+            "target": target,
             "options": options,
             "timeout": timeout,
             "verbose": verbose,
             "retransmits": retransmits,
             "use_local_port": use_local_port
-        },
-        return_code=-1,
-        raw_output="",
-        raw_error=""
+        }
     )
 
     try:
 
+        # Validate parameters
         if not target:
-            response.raw_error = "target parameter is required"
+            response.add_error("target parameter is required")
             return response
+        
         if timeout < 100:
-            response.raw_error = "timeout must be at least 100 milliseconds"
+            response.add_error("timeout must be at least 100 milliseconds")
             return response
+        
         if timeout > 30000:  # 30 seconds max
-            response.raw_error = "timeout cannot exceed 30000 milliseconds"
+            response.add_error("timeout cannot exceed 30000 milliseconds")
             return response
+        
         if retransmits < 0:
-            response.raw_error = "retransmits cannot be negative"
+            response.add_error("retransmits cannot be negative")
             return response
+        
         if retransmits > 10:
-            response.raw_error = "retransmits cannot exceed 10"
+            response.add_error("retransmits cannot exceed 10")
             return response
         
         # Check if nbtscan is installed
         try:
             subprocess.run(["which", "nbtscan"], check=True, capture_output=True)
         except subprocess.CalledProcessError:
-            response.raw_error = "nbtscan command not found. Please install nbtscan."            
+            response.add_error("nbtscan command not found. Please install nbtscan.")
+            response.end_process_timer()
             return response
         
         # Map friendly option names to actual nbtscan parameters
@@ -356,6 +358,8 @@ async def nbtscan_scan(target: str, options: str = "basic", timeout: int = 1000,
         # Add target
         cmd.append(target)
         
+        response.raw_command = " ".join(cmd)
+        
         # Execute command
         result = subprocess.run(
             cmd,
@@ -365,38 +369,17 @@ async def nbtscan_scan(target: str, options: str = "basic", timeout: int = 1000,
             timeout=60  # 1 minute max timeout
         )
         
-        end_time = time.time()
-        process_time_ms = int((end_time - start_time) * 1000)
-        
-        raw_output = result.stdout if result.stdout else ""
-        raw_error = result.stderr if result.stderr else ""
-        
-        # Parse the nbtscan output into structured format
-        
-        
-        response.process_time_ms=process_time_ms
-        response.return_code=result.returncode
-        response.raw_output=raw_output
-        response.raw_error=raw_error
-        
-        return response
-        
-    except subprocess.TimeoutExpired:
-        end_time = time.time()
-        process_time_ms = int((end_time - start_time) * 1000)
-        
-        response.process_time_ms=process_time_ms
-        response.raw_error="Command timed out"
+        response.raw_output = result.stdout if result.stdout else ""
+        response.raw_error = result.stderr if result.stderr else ""
+        response.return_code = result.returncode
+        response.end_process_timer()
         
         return response
         
     except Exception as e:
-        end_time = time.time()
-        process_time_ms = int((end_time - start_time) * 1000)
         
-        response.return_code=-1,
-        response.raw_output=""
-        response.raw_error=str(e)
-        
+        response.raw_error = str(e)
+        response.return_code = None
+        response.end_process_timer()
         return response
 

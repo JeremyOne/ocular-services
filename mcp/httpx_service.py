@@ -1,6 +1,5 @@
 from typing import Optional
 import subprocess
-import json
 import os
 import tempfile
 import shutil
@@ -52,30 +51,61 @@ async def httpx_scan(targets: str, options: str = "basic", ports: str = "80,443,
                      method: str = "GET", timeout: int = 10, threads: int = 50, rate_limit: int = 150, retries: int = 2) -> dict:
 
 
-    import time
-    start_time = time.time()
+    # Initialize ServiceResponse
+    response = ServiceResponse(
+        service="httpx",
+        target=targets,
+        arguments={
+            "targets": targets,
+            "options": options,
+            "ports": ports,
+            "paths": paths,
+            "method": method,
+            "timeout": timeout,
+            "threads": threads,
+            "rate_limit": rate_limit,
+            "retries": retries
+        }
+    )
     
     try:
-        if not targets:
-            return {"error": "targets parameter is required"}
         
         # Validate parameters
+        if not targets:
+            response.add_error("targets parameter is required")
+            return response
+        
         if timeout < 5:
-            return {"error": "timeout must be at least 5 seconds"}
+            response.add_error("timeout must be at least 5 seconds")
+            return response
+        
         if timeout > 120:
-            return {"error": "timeout cannot exceed 120 seconds"}
+            response.add_error("timeout cannot exceed 120 seconds")
+            return response
+        
         if threads < 1:
-            return {"error": "threads must be at least 1"}
+            response.add_error("threads must be at least 1")
+            return response
+        
         if threads > 100:
-            return {"error": "threads cannot exceed 100"}
+            response.add_error("threads cannot exceed 100")
+            return response
+        
         if rate_limit < 1:
-            return {"error": "rate_limit must be at least 1"}
+            response.add_error("rate_limit must be at least 1")
+            return response
+        
         if rate_limit > 1000:
-            return {"error": "rate_limit cannot exceed 1000"}
+            response.add_error("rate_limit cannot exceed 1000")
+            return response
+        
         if retries < 0:
-            return {"error": "retries cannot be negative"}
+            response.add_error("retries cannot be negative")
+            return response
+        
         if retries > 5:
-            return {"error": "retries cannot exceed 5"}
+            response.add_error("retries cannot exceed 5")
+            return response
         
         # Check if httpx is installed
         # Prefer PATH resolution, but also support a few common absolute locations.
@@ -92,25 +122,9 @@ async def httpx_scan(targets: str, options: str = "basic", ports: str = "80,443,
                     break
         
         if not httpx_path:
-            end_time = time.time()
-            process_time_ms = int((end_time - start_time) * 1000)
-            
-            response = ServiceResponse(
-                service="httpx",
-                process_time_ms=process_time_ms,
-                target=targets,
-                arguments={
-                    "options": options,
-                    "ports": ports,
-                    "method": method,
-                    "timeout": timeout,
-                    "threads": threads
-                },
-                return_code=-1,
-                raw_output="",
-                raw_error="httpx is not installed. Install it and ensure it's on PATH (e.g., ProjectDiscovery httpx binary)."
-            )
-            
+            response.add_error("httpx is not installed. Install it and ensure it's on PATH (e.g., ProjectDiscovery httpx binary).")
+            response.return_code = -1
+            response.end_process_timer()
             return response
         
         # Map friendly option names to actual httpx parameters
@@ -164,6 +178,8 @@ async def httpx_scan(targets: str, options: str = "basic", ports: str = "80,443,
             # Add output format - JSON to stdout
             cmd.extend(["-j", "-silent", "-no-color"])
             
+            response.raw_command = " ".join(cmd)
+            
             # Execute command
             result = subprocess.run(
                 cmd,
@@ -173,31 +189,10 @@ async def httpx_scan(targets: str, options: str = "basic", ports: str = "80,443,
                 timeout=300  # 5 minute max timeout
             )
             
-            end_time = time.time()
-            process_time_ms = int((end_time - start_time) * 1000)
-            
-            raw_output = result.stdout if result.stdout else ""
-            raw_error = result.stderr if result.stderr else ""
-            
-            # Format response according to schema.json
-            response = ServiceResponse(
-                service="httpx",
-                process_time_ms=process_time_ms,
-                target=targets,
-                arguments={
-                    "options": options,
-                    "ports": ports,
-                    "paths": paths,
-                    "method": method,
-                    "timeout": timeout,
-                    "threads": threads,
-                    "rate_limit": rate_limit,
-                    "retries": retries
-                },
-                return_code=result.returncode,
-                raw_output=raw_output,
-                raw_error=raw_error
-            )
+            response.raw_output = result.stdout if result.stdout else ""
+            response.raw_error = result.stderr if result.stderr else ""
+            response.return_code = result.returncode
+            response.end_process_timer()
             
             return response
             
@@ -206,46 +201,9 @@ async def httpx_scan(targets: str, options: str = "basic", ports: str = "80,443,
             if 'targets_file_path' in locals() and os.path.exists(targets_file_path):
                 os.remove(targets_file_path)
         
-    except subprocess.TimeoutExpired:
-        end_time = time.time()
-        process_time_ms = int((end_time - start_time) * 1000)
-        
-        response = ServiceResponse(
-            service="httpx",
-            process_time_ms=process_time_ms,
-            target=targets if 'targets' in locals() else "unknown",
-            arguments={
-                "options": options if 'options' in locals() else "",
-                "ports": ports if 'ports' in locals() else "",
-                "method": method if 'method' in locals() else "GET",
-                "timeout": timeout if 'timeout' in locals() else 10,
-                "threads": threads if 'threads' in locals() else 50
-            },
-            return_code=-1,
-            raw_output="",
-            raw_error="Command timed out after 5 minutes"
-        )
-        
-        return response
-        
     except Exception as e:
-        end_time = time.time()
-        process_time_ms = int((end_time - start_time) * 1000)
         
-        response = ServiceResponse(
-            service="httpx",
-            process_time_ms=process_time_ms,
-            target=targets if 'targets' in locals() else "unknown",
-            arguments={
-                "options": options if 'options' in locals() else "",
-                "ports": ports if 'ports' in locals() else "",
-                "method": method if 'method' in locals() else "GET",
-                "timeout": timeout if 'timeout' in locals() else 10,
-                "threads": threads if 'threads' in locals() else 50
-            },
-            return_code=-1,
-            raw_output="",
-            raw_error=str(e)
-        )
-        
+        response.raw_error = str(e)
+        response.return_code = None
+        response.end_process_timer()
         return response

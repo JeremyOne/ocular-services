@@ -1,7 +1,5 @@
 from typing import Optional
 import subprocess
-import re
-import datetime
 from service_response import ServiceResponse
 
 # whois - WHOIS domain lookup tool
@@ -51,43 +49,44 @@ async def whois_lookup(domain: str, options: str = "", server: str = "", timeout
     Returns:
         JSON response matching schema.json format
     """
-    import time
-    start_time = time.time()
+
+    # Clean domain input - remove protocol and path if present
+    cleaned_domain = domain.replace("https://", "").replace("http://", "").split("/")[0].strip() if domain else ""
+    
+    # Initialize ServiceResponse
+    response = ServiceResponse(
+        service="whois",
+        target=cleaned_domain,
+        arguments={
+            "domain": cleaned_domain,
+            "options": options,
+            "server": server,
+            "timeout": timeout
+        }
+    )
     
     try:
-        if not domain:
-            return {"error": "domain parameter is required"}
         
-        # Clean domain input - remove protocol and path if present
-        domain = domain.replace("https://", "").replace("http://", "").split("/")[0].strip()
+        # Validate parameters
+        if not domain:
+            response.add_error("domain parameter is required")
+            return response
         
         # Validate timeout
         if timeout < 1:
-            return {"error": "timeout must be at least 1 second"}
+            response.add_error("timeout must be at least 1 second")
+            return response
         if timeout > 120:  # 2 minutes max
-            return {"error": "timeout cannot exceed 120 seconds"}
+            response.add_error("timeout cannot exceed 120 seconds")
+            return response
         
         # Check if whois is installed
         try:
             subprocess.run(["which", "whois"], check=True, capture_output=True)
         except subprocess.CalledProcessError:
-            end_time = time.time()
-            process_time_ms = int((end_time - start_time) * 1000)
-            
-            response = ServiceResponse(
-                service="whois",
-                process_time_ms=process_time_ms,
-                target=domain,
-                arguments={
-                    "options": options,
-                    "server": server,
-                    "timeout": timeout
-                },
-                return_code=-1,
-                raw_output="",
-                raw_error="whois is not installed. Please install it with 'sudo apt-get install whois'"
-            )
-            
+            response.add_error("whois is not installed. Please install it with 'sudo apt-get install whois'")
+            response.return_code = -1
+            response.end_process_timer()
             return response
         
         # Build command
@@ -103,7 +102,9 @@ async def whois_lookup(domain: str, options: str = "", server: str = "", timeout
             cmd.extend(["-h", server])
         
         # Add domain
-        cmd.append(domain)
+        cmd.append(cleaned_domain)
+        
+        response.raw_command = " ".join(cmd)
         
         # Execute command
         result = subprocess.run(
@@ -114,65 +115,16 @@ async def whois_lookup(domain: str, options: str = "", server: str = "", timeout
             timeout=timeout
         )
         
-        end_time = time.time()
-        process_time_ms = int((end_time - start_time) * 1000)
-        
-        raw_output = result.stdout if result.stdout else ""
-        raw_error = result.stderr if result.stderr else ""
-        
-        # Format response according to schema.json
-        response = ServiceResponse(
-            service="whois",
-            process_time_ms=process_time_ms,
-            target=domain,
-            arguments={
-                "options": options,
-                "server": server,
-                "timeout": timeout
-            },
-            return_code=result.returncode,
-            raw_output=raw_output,
-            raw_error=raw_error
-        )
-        
-        return response
-        
-    except subprocess.TimeoutExpired:
-        end_time = time.time()
-        process_time_ms = int((end_time - start_time) * 1000)
-        
-        response = ServiceResponse(
-            service="whois",
-            process_time_ms=process_time_ms,
-            target=domain if 'domain' in locals() else "unknown",
-            arguments={
-                "options": options if 'options' in locals() else "",
-                "server": server if 'server' in locals() else "",
-                "timeout": timeout if 'timeout' in locals() else 30
-            },
-            return_code=-1,
-            raw_output="",
-            raw_error=f"Command timed out after {timeout} seconds"
-        )
+        response.raw_output = result.stdout if result.stdout else ""
+        response.raw_error = result.stderr if result.stderr else ""
+        response.return_code = result.returncode
+        response.end_process_timer()
         
         return response
         
     except Exception as e:
-        end_time = time.time()
-        process_time_ms = int((end_time - start_time) * 1000)
         
-        response = ServiceResponse(
-            service="whois",
-            process_time_ms=process_time_ms,
-            target=domain if 'domain' in locals() else "unknown",
-            arguments={
-                "options": options if 'options' in locals() else "",
-                "server": server if 'server' in locals() else "",
-                "timeout": timeout if 'timeout' in locals() else 30
-            },
-            return_code=-1,
-            raw_output="",
-            raw_error=str(e)
-        )
-        
+        response.raw_error = str(e)
+        response.return_code = None
+        response.end_process_timer()
         return response
