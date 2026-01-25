@@ -30,7 +30,7 @@ def get_service_info() -> dict:
         }
     }
 
-async def whois_lookup(domain: str, options: str = "", server: str = "", timeout: int = 30) -> dict:
+async def whois_lookup(domain: str, options: str = "", server: str = "", timeout: int = 30) -> ServiceResponse:
     """Perform WHOIS lookup on a domain to get registration information.
     
     Parameters:

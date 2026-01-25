@@ -31,6 +31,20 @@ curl http://localhost:8999/health
 curl http://localhost:8999/services
 ```
 
+## Using the services
+Using the above launch, services will be available on http://localhost:8889/mcp/
+
+In LM Studio you can add the server to mcp.json:
+
+```
+{
+  "mcpServers": {
+    "ocular-services": {
+      "url": "http://localhost:8999/mcp/"
+    }
+  }
+}
+```
 
 ## Envionment Setup
 git config --global push.autoSetupRemote true
@@ -42,6 +56,14 @@ sudo apt install python3.12-venv
 python3 -m venv .venv
 source .venv/bin/activate
 ```
+
+Or in windows:
+(Powershell does not like paths that start with a .)
+'''
+python3 -m venv venv
+.\venv\Scripts\Activate.ps1
+'''
+
 
 Install Packages:
 ```

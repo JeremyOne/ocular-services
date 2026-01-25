@@ -91,13 +91,13 @@ def dns_lookup_mcp(host: str, record_types: List[str]) -> dict:
     
     return result
 
-async def dns_lookup(host: str, record_types: Optional[str] = "A,TXT", timeout: Optional[float] = 5, asJson: Optional[bool] = True) -> dict:
+async def dns_lookup(host: str, record_types: Optional[str] = "A,TXT", timeout: Optional[float] = 5, asJson: Optional[bool] = True) -> ServiceResponse:
     """Perform DNS lookups for various record types.
         host: The hostname or domain to look up (required)
         record_types: Comma-separated list of DNS record types (default: A,TXT)
         timeout: DNS query timeout in seconds (default: 5)
     Returns:
-        JSON response matching schema.json format with DNS information
+        ServiceResponse with DNS information
     """
 
     # Parse record types

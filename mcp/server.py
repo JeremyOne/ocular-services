@@ -8,35 +8,32 @@ import requests
 import logging
 from fastmcp import FastMCP
 from fastmcp.client.logging import LogMessage
-from mcp.curl_service import curl_request
 from starlette.requests import Request
 from starlette.responses import PlainTextResponse, JSONResponse
 
 
 import ping_service as ping_service_module
 import curl_service as curl_service_module  
-#import datetime_service as datetime_service_module
-#import dns_service as dns_service_module
+import dns_service as dns_service_module
 ## import enum4linux_service as enum4linux_service_module
-#import whois_service as whois_service_module
-#import wpscan_service as wpscan_service_module
-#import httpx_service as httpx_service_module
-#import nbtscan_service as nbtscan_service_module
-#import nmap_service as nmap_service_module
-#import nikto_service as nikto_service_module
+import whois_service as whois_service_module
+import wpscan_service as wpscan_service_module
+import httpx_service as httpx_service_module
+import nbtscan_service as nbtscan_service_module
+import nmap_service as nmap_service_module
+import nikto_service as nikto_service_module
 
-from ping_service import ping_host, ping_host_raw
+from ping_service import ping_host
 from datetime import datetime, timezone
 from curl_service import curl_request
-#from datetime_service import get_datetime
-#from dns_service import dns_lookup_service
+from dns_service import dns_lookup
 ##from enum4linux_service import enum4linux_scan
-#from whois_service import whois_lookup
-#from wpscan_service import wpscan_scan
-#from httpx_service import httpx_scan
-#from nbtscan_service import nbtscan_scan
-#from nmap_service import nmap_scan
-#from nikto_service import nikto_scan
+from whois_service import whois_lookup
+from wpscan_service import wpscan_scan
+from httpx_service import httpx_scan
+from nbtscan_service import nbtscan_scan
+from nmap_service import nmap_scan
+from nikto_service import nikto_scan
 
 # Custom log handler to provide detailed logging to console
 async def detailed_log_handler(message: LogMessage):
@@ -54,7 +51,7 @@ async def detailed_log_handler(message: LogMessage):
 # Combined MCP server for all ocular_agents services
 # This server provides access to multiple penetration testing tools
 mcp = FastMCP(
-    name="Ocular Agents - All Services",
+    name="Ocular Agents",
     instructions="This MCP server provides access to multiple penetration testing and network discovery tools."
     )
 
@@ -64,12 +61,12 @@ mcp = FastMCP(
         description="Network connectivity testing using ICMP ping."
     )
 async def ping_service(host: str, count: int = 5, interval: float = 1.0, packet_size: int = 56, AsJson: bool = False) -> str:
+    result = await ping_host(host, count, interval, packet_size)
+    
     if AsJson:
-        result = await ping_host(host, count, interval, packet_size)
         return json.dumps(result)
     else:
-        result = await ping_host_raw(host, count, interval, packet_size)
-        return result
+        return result.__repr__()
 
 @mcp.tool(
         name="time",
@@ -89,79 +86,145 @@ async def time_service(InUTC: bool, AsJson: bool) -> str:
 
 
 @mcp.tool(
-        name="/curl",
+        name="curl",
         description="Make HTTP requests using curl for penetration testing and discovery."
-        )
+    )
 async def curl_service(url: str, method: str = "GET", headers: str = "", data: str = "", 
                        follow_redirects: bool = False, verbose: bool = False, insecure: bool = False, 
-                       user_agent: str = "", headers_only: bool = False, asJson: bool = False) -> dict:
+                       user_agent: str = "", headers_only: bool = False, AsJson: bool = False) -> str:
     
     result = await curl_request(url, method, headers, data, follow_redirects, verbose, insecure, user_agent, headers_only)
-    return result
+    
+    if AsJson:
+        return json.dumps(result.to_dict())
+    else:
+        return result.__repr__()
 
-#
-#@mcp.tool("/datetime")
-#async def datetime_service(request: Request) -> JSONResponse:
-#    return await get_datetime(request)
-#
-#@mcp.tool("/dns")
-#async def dns_service(request: Request) -> JSONResponse:
-#    return await dns_lookup_service(request)
-#
-##@mcp.tool("/enum4linux", methods=["GET", "POST"])
-##async def enum4linux_service(request: Request) -> JSONResponse:
-##    return await enum4linux_scan(request)
-#
-#@mcp.tool("/whois")
-#async def whois_service(request: Request) -> JSONResponse:
-#    return await whois_lookup(request)
-#
-#@mcp.tool("/wpscan")
-#async def wpscan_service(request: Request) -> JSONResponse:
-#    return await wpscan_scan(request)
-#
-#@mcp.tool("/httpx")
-#async def httpx_service(request: Request) -> JSONResponse:
-#    return await httpx_scan(request)
-#
-#@mcp.tool("/nbtscan")
-#async def nbtscan_service(request: Request) -> JSONResponse:
-#    return await nbtscan_scan(request)
-#
-#@mcp.tool("/nmap")
-#async def nmap_service(request: Request) -> JSONResponse:
-#    return await nmap_scan(request)
-#
-#@mcp.tool("/nikto")
-#async def nikto_service(request: Request) -> JSONResponse:
-#    return await nikto_scan(request)
+
+@mcp.tool(
+        name="dns",
+        description="Perform DNS lookups for various record types."
+    )
+async def dns_service(host: str, record_types: str = "A,TXT", timeout: float = 5.0, AsJson: bool = False) -> str:
+    result = await dns_lookup(host, record_types, timeout)
+    
+    if AsJson:
+        return json.dumps(result.to_dict())
+    else:
+        return result.__repr__()
+
+
+@mcp.tool(
+        name="whois",
+        description="WHOIS domain registration information lookup."
+    )
+async def whois_service(domain: str, options: str = "", server: str = "", timeout: int = 30, AsJson: bool = False) -> str:
+    result = await whois_lookup(domain, options, server, timeout)
+    
+    if AsJson:
+        return json.dumps(result.to_dict())
+    else:
+        return result.__repr__()
+
+
+@mcp.tool(
+        name="wpscan",
+        description="WordPress security scanner using WPScan."
+    )
+async def wpscan_service(url: str, options: str = "basic", api_token: str = "", timeout: int = 300, 
+                         force: bool = False, random_user_agent: bool = False, AsJson: bool = False) -> str:
+    result = await wpscan_scan(url, options, api_token, timeout, force, random_user_agent)
+    
+    if AsJson:
+        return json.dumps(result.to_dict())
+    else:
+        return result.__repr__()
+
+
+@mcp.tool(
+        name="httpx",
+        description="Fast HTTP/HTTPS service discovery and analysis."
+    )
+async def httpx_service(targets: str, options: str = "basic", ports: str = "80,443,8080,8443", paths: str = "", 
+                        method: str = "GET", timeout: int = 10, threads: int = 50, rate_limit: int = 150, 
+                        retries: int = 2, AsJson: bool = False) -> str:
+    result = await httpx_scan(targets, options, ports, paths, method, timeout, threads, rate_limit, retries)
+    
+    if AsJson:
+        return json.dumps(result.to_dict())
+    else:
+        return result.__repr__()
+
+
+@mcp.tool(
+        name="nbtscan",
+        description="NetBIOS name scanner for Windows network discovery."
+    )
+async def nbtscan_service(target: str, options: str = "basic", timeout: int = 1000, verbose: bool = False,
+                          retransmits: int = 0, use_local_port: bool = False, AsJson: bool = False) -> str:
+    result = await nbtscan_scan(target, options, timeout, verbose, retransmits, use_local_port)
+    
+    if AsJson:
+        return json.dumps(result.to_dict())
+    else:
+        return result.__repr__()
+
+
+@mcp.tool(
+        name="nmap",
+        description="Network Mapper for network discovery and security auditing."
+    )
+async def nmap_service(target: str, scan_type: str = "fast", timeout: int = 240, 
+                       ports: str = "", scripts: str = "", AsJson: bool = False) -> str:
+    result = await nmap_scan(target, scan_type, timeout, ports, scripts)
+    
+    if AsJson:
+        return json.dumps(result.to_dict())
+    else:
+        return result.__repr__()
+
+
+@mcp.tool(
+        name="nikto",
+        description="Web vulnerability scanner for comprehensive security testing."
+    )
+async def nikto_service(target: str, scan_type: str = "basic", port: str = "", ssl: bool = False, 
+                        timeout: int = 10, tuning: str = "", plugins: str = "", vhost: str = "", 
+                        AsJson: bool = False) -> str:
+    result = await nikto_scan(target, scan_type, port, ssl, timeout, tuning, plugins, vhost)
+    
+    if AsJson:
+        return json.dumps(result.to_dict())
+    else:
+        return result.__repr__()
+
+
 
 # Service Discovery Endpoint
-@mcp.custom_route("/services", methods=["GET"])
-
-async def list_services(request: Request) -> JSONResponse:
-    #List all available services in this MCP server."""
-
-    all_service_info = [
-        ping_service_module.get_service_info()
-        #curl_service_module.get_service_info(),
-        #datetime_service_module.get_service_info(),
-        #dns_service_module.get_service_info(),
-        ## enum4linux_service_module.get_service_info(),
-        #whois_service_module.get_service_info(),
-        #wpscan_service_module.get_service_info(),
-        #httpx_service_module.get_service_info(),
-        #nbtscan_service_module.get_service_info(),
-        #nmap_service_module.get_service_info(),
-        #nikto_service_module.get_service_info()
-    ]
-
-    services = {
-        "server": "Ocular Agents - All Services",
-        "version": "1.0",
-        "services": all_service_info
-    }
-    return JSONResponse(services)
+#@mcp.custom_route("/services", methods=["GET"])
+#
+#async def list_services(request: Request) -> JSONResponse:
+#    #List all available services in this MCP server."""
+#
+#    all_service_info = [
+#        ping_service_module.get_service_info(),
+#        curl_service_module.get_service_info(),
+#        dns_service_module.get_service_info(),
+#        ## enum4linux_service_module.get_service_info(),
+#        whois_service_module.get_service_info(),
+#        wpscan_service_module.get_service_info(),
+#        httpx_service_module.get_service_info(),
+#        nbtscan_service_module.get_service_info(),
+#        nmap_service_module.get_service_info(),
+#        nikto_service_module.get_service_info()
+#    ]
+#
+#    services = {
+#        "server": "Ocular Agents",
+#        "version": "1.0",
+#        "services": all_service_info
+#    }
+#    return JSONResponse(services)
 
 
 # Health Check Endpoint
@@ -170,31 +233,31 @@ async def health_check(request: Request) -> PlainTextResponse:
     return PlainTextResponse("OK")
 
 # Root Endpoint
-@mcp.custom_route("/", methods=["GET"])
-async def root(request: Request) -> JSONResponse:
-    """Root endpoint with basic server information."""
-    info = {
-        "server": "Ocular Agents - All Services",
-        "description": "MCP server providing penetration testing and network discovery tools",
-        "version": "1.0",
-        "endpoints": {
-            "/": "This information page",
-            "/services": "List all available services",
-            "/ping": "Network connectivity testing",
-            "/curl": "HTTP request testing",
-            "/datetime": "Date and time information",
-            "/dns": "DNS record lookups",
-            "/enum4linux": "SMB/CIFS enumeration",
-            "/whois": "Domain registration information",
-            "/wpscan": "WordPress security scanning",
-            "/httpx": "HTTP/HTTPS service discovery",
-            "/nbtscan": "NetBIOS name scanning",
-            "/nmap": "Network mapping and port scanning",
-            "/health": "Health check"
-        },
-        "documentation": "See /services for detailed parameter information"
-    }
-    return JSONResponse(info)
+#@mcp.custom_route("/", methods=["GET"])
+#async def root(request: Request) -> JSONResponse:
+#    """Root endpoint with basic server information."""
+#    info = {
+#        "server": "Ocular Agents - All Services",
+#        "description": "MCP server providing penetration testing and network discovery tools",
+#        "version": "1.0",
+#        "endpoints": {
+#            "/": "This information page",
+#            "/services": "List all available services",
+#            "/ping": "Network connectivity testing",
+#            "/curl": "HTTP request testing",
+#            "/datetime": "Date and time information",
+#            "/dns": "DNS record lookups",
+#            "/enum4linux": "SMB/CIFS enumeration",
+#            "/whois": "Domain registration information",
+#            "/wpscan": "WordPress security scanning",
+#            "/httpx": "HTTP/HTTPS service discovery",
+#            "/nbtscan": "NetBIOS name scanning",
+#            "/nmap": "Network mapping and port scanning",
+#            "/health": "Health check"
+#        },
+#        "documentation": "See /services for detailed parameter information"
+#    }
+#    return JSONResponse(info)
 
 
 #@mcp.custom_route("/test", methods=["GET"])

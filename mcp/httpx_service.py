@@ -48,7 +48,7 @@ def get_service_info() -> dict:
     }
 
 async def httpx_scan(targets: str, options: str = "basic", ports: str = "80,443,8080,8443", paths: str = "", 
-                     method: str = "GET", timeout: int = 10, threads: int = 50, rate_limit: int = 150, retries: int = 2) -> dict:
+                     method: str = "GET", timeout: int = 10, threads: int = 50, rate_limit: int = 150, retries: int = 2) -> ServiceResponse:
 
 
     # Initialize ServiceResponse

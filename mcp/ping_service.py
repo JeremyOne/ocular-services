@@ -68,7 +68,7 @@ def get_service_info() -> dict:
         }
     }
 
-async def ping_host(host: str, count: int = 5, interval: float = 1.0, packet_size: int = 56) -> dict:
+async def ping_host(host: str, count: int = 5, interval: float = 1.0, packet_size: int = 56) -> ServiceResponse:
     """Ping a host to test network connectivity.
         host: The hostname or IP address to ping
         count: Number of ping packets to send (default: 5)
