@@ -1,7 +1,7 @@
 # Ocular-services
-A set of MCP services focusted on network and security scanning
+A set of MCP services focused on network and security scanning
 
-run mcp/allservices.py to start all services.
+run mcp/server.py to start all services.
 
 ## Docker
 
@@ -28,11 +28,10 @@ docker compose up --build
 Quick check:
 ```
 curl http://localhost:8999/health
-curl http://localhost:8999/services
 ```
 
 ## Using the services
-Using the above launch, services will be available on http://localhost:8889/mcp/
+Using the above launch, services will be available on http://localhost:8999/mcp/
 
 In LM Studio you can add the server to mcp.json:
 
@@ -59,10 +58,10 @@ source .venv/bin/activate
 
 Or in windows:
 (Powershell does not like paths that start with a .)
-'''
+```
 python3 -m venv venv
 .\venv\Scripts\Activate.ps1
-'''
+```
 
 
 Install Packages:
@@ -71,37 +70,38 @@ pip install -r requirements.txt
 pip install --upgrade -r requirements.txt
 ```
 
-## Implemented / required tools
+## Implemented command line tools
+(If running locally, the docker image has all dependencies built in)
 
-### MCP
-pip install uv fastmcp 
+These are not required to run the server, but individual tools return an error if the command is unavailable.
 
-uv venv
-source .venv/bin/activate
-uv pip install fastmcp
-
-### Simple installs
-sudo apt install nmap
-sudo apt install smbclient
-sudo apt install nikto
-sudo apt install masscan
-sudo apt install whois
-sudo apt install nbtscan
+### APT/SNAP installs
+```
+sudo apt install nmap smbclient nikto masscan whois nbtscan
 sudo snap install enum4linux
+```
 
 ### HTTPX
 #### Install Go if not already installed
+```
 sudo apt-get update
 sudo apt-get install golang-go
+```
 
 #### Set up Go environment variables
+```
 echo 'export GOPATH=$HOME/go' >> ~/.bashrc
 echo 'export PATH=$PATH:$GOPATH/bin' >> ~/.bashrc
 source ~/.bashrc
+```
 
 #### Install httpx
+```
 go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest
+```
 
-### wpscan
+### Install Ruby and WPscan
+```
 sudo apt install ruby-rubygems ruby-dev
 sudo gem install wpscan
+```
