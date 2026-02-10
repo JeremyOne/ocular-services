@@ -39,29 +39,10 @@ def get_service_info() -> dict:
         }
     }
 
-def get_option_descriptions() -> list: [
-        {
-        "name": "curl",
-        "endpoint": "/curl",
-        "description": "HTTP requests for web application testing",
-        "methods": ["GET", "POST"],
-        "parameters": {
-            "url": "Target URL (required)",
-            "method": "HTTP method (default: GET)",
-            "headers": "Custom headers (semicolon-separated)",
-            "data": "POST data",
-            "follow_redirects": "Follow HTTP redirects (boolean)",
-            "verbose": "Enable verbose output (boolean)",
-            "insecure": "Allow insecure SSL (boolean)",
-            "user_agent": "Custom User-Agent string",
-            "headers_only": "Get headers only (boolean)"
-        }
-    }
-]
 
 async def curl_request(url: str, method: str = "GET", headers: str = "", data: str = "", 
                        follow_redirects: bool = False, verbose: bool = False, insecure: bool = False, 
-                       user_agent: str = "", headers_only: bool = False) -> dict:
+                       user_agent: str = "", headers_only: bool = False) -> ServiceResponse:
     
     """Make HTTP requests using curl for penetration testing and discovery.
         url: The target URL to request

@@ -22,10 +22,10 @@ class ServiceResponse:
         raw_error: Raw stderr from the service
     """
     service: str
-    process_start_time: datetime = field(default_factory=datetime.utcnow)
-    process_time_ms: int
-    process_end_time: datetime
     target: str
+    process_start_time: datetime = field(default_factory=datetime.utcnow)
+    process_time_ms: int = 0
+    process_end_time: Optional[datetime] = None
     arguments: Dict[str, Any] = field(default_factory=dict)
     raw_command: str = ""
     return_code: int = 0
@@ -64,15 +64,15 @@ class ServiceResponse:
         """
         return cls(
             service=data.get("service", ""),
+            target=data.get("target", ""),
             process_start_time=data.get("process_start_time", datetime.utcnow()),
             process_time_ms=data.get("process_time_ms", 0),
-            process_end_time=data.get("process_end_time", datetime.utcnow()),
-            target=data.get("target", ""),
+            process_end_time=data.get("process_end_time"),
             arguments=data.get("arguments", {}),
             return_code=data.get("return_code", 0),
             raw_command=data.get("raw_command", ""),
-            raw_error=data.get("raw_error", ""),
-            structured_output=data.get("structured_output", {})
+            raw_output=data.get("raw_output", ""),
+            raw_error=data.get("raw_error", "")
         )
     
     def is_successful(self) -> bool:
@@ -118,7 +118,18 @@ class ServiceResponse:
     
     def __repr__(self) -> str:
         """String representation of the ServiceResponse."""
-        return (f"ServiceResponse(service='{self.service}', "
-                f"target='{self.target}', "
-                f"process_time_ms={self.process_time_ms}, "
-                f"return_code={self.return_code})")
+        string = (f"service: '{self.service}', "
+                f"target: '{self.target}', "
+                f"process_time_ms: {self.process_time_ms}, "
+                f"process_start_time: {self.process_start_time}, "
+                f"process_end_time: {self.process_end_time}, "
+                f"return_code: {self.return_code} \r\n --- Raw output: \r\n"
+                f"{self.raw_output}")
+
+        if(self.raw_output):
+            string += (f" \r\n --- Tool raw output: \r\n {self.raw_output}")
+
+        if(self.raw_error):
+            string += (f" \r\n --- An error occured: \r\n {self.raw_error}")
+
+        return string
