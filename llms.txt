@@ -1,0 +1,116 @@
+# Ocular Services
+
+> A set of MCP (Model Context Protocol) services focused on network and security scanning
+
+## Project Structure
+
+- `/mcp/` - MCP service implementations
+  - `server.py` - Main FastMCP server with all service endpoints
+  - `*_service.py` - Individual service modules (ping, nmap, curl, dns, whois, etc.)
+  - `service_response.py` - Standardized response format for all services
+  - `LLM_SERVICE_DOCUMENTATION.md` - Comprehensive API documentation
+  - `llm_service_schema.json` - JSON schema for service responses
+- `/tests/` - Test suite
+- `Dockerfile` - Container build configuration
+- `docker-compose.yml` - Docker Compose setup
+- `requirements.txt` - Python dependencies
+- `readme.md` - Project setup and usage instructions
+
+## Technology Stack
+
+- **Framework**: FastMCP (Model Context Protocol server)
+- **Language**: Python 3.12+
+- **Container**: Docker with Ubuntu base
+- **External Tools**: nmap, nikto, nbtscan, whois, wpscan, httpx, curl, ping
+- **Libraries**: dnspython, requests, starlette, uvicorn
+
+## Services Available
+
+1. **ping** - ICMP network connectivity testing
+2. **time** - Server time retrieval
+3. **curl** - HTTP/HTTPS requests for web testing
+4. **dns** - DNS record lookups (A, MX, TXT, CNAME, NS, PTR, etc.)
+5. **whois** - Domain registration information
+6. **wpscan** - WordPress security scanning
+7. **httpx** - Fast HTTP service discovery
+8. **nbtscan** - NetBIOS name scanning for Windows networks
+9. **nmap** - Network port and service scanning
+10. **nikto** - Web vulnerability scanning
+
+## Running the Project
+
+### Docker (Recommended)
+```bash
+# Build and run
+docker compose up --build
+
+# Or manually
+docker build -t ocular-services .
+docker run --rm -p 8999:8999 ocular-services
+```
+
+### Local Development
+```bash
+# Setup Python environment
+python3 -m venv venv
+source venv/bin/activate  # On Windows: .\venv\Scripts\Activate.ps1
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run server
+python mcp/server.py
+```
+
+## API Endpoint
+
+- Server runs on: `http://localhost:8999/mcp/`
+- Health check: `http://localhost:8999/health`
+
+## Key Features
+
+- All services return standardized `ServiceResponse` format
+- Command availability checking before execution
+- Configurable timeouts and scan options
+- JSON output support with `AsJson` parameter
+- Docker containerization with necessary network capabilities
+- FastMCP integration for LLM tool use
+
+## Documentation
+
+- Full API reference: `/mcp/LLM_SERVICE_DOCUMENTATION.md`
+- Service response schema: `/mcp/llm_service_schema.json`
+- MCP details: `/mcp/mcp_readme.md`
+
+## Common Patterns
+
+### Service Response Structure
+```python
+{
+    "service": "service_name",
+    "target": "scan_target",
+    "process_start_time": "ISO8601_datetime",
+    "process_time_ms": 123,
+    "arguments": {...},
+    "raw_command": "executed_command",
+    "return_code": 0,
+    "raw_output": "stdout",
+    "raw_error": "stderr"
+}
+```
+
+### Adding New Services
+
+1. Create `{tool}_service.py` in `/mcp/`
+2. Implement async function returning `ServiceResponse`
+3. Add command availability check using `subprocess.run(["which", "tool"])`
+4. Register in `server.py` with `@mcp.tool()` decorator
+5. Import and add endpoint wrapper function
+
+### Security Considerations
+
+- Services execute system commands - run in isolated containers
+- Validation of all input parameters before execution
+- Timeout limits on all operations
+- Error messages include installation instructions
+- Some tools require elevated privileges (use Docker capabilities)

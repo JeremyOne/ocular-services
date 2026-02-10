@@ -64,7 +64,7 @@ async def ping_service(host: str, count: int = 5, interval: float = 1.0, packet_
     result = await ping_host(host, count, interval, packet_size)
     
     if AsJson:
-        return json.dumps(result)
+        return json.dumps(result.to_dict())
     else:
         return result.__repr__()
 
