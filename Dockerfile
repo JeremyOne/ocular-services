@@ -52,7 +52,7 @@ RUN apt-get install -y --no-install-recommends \
 # Clean up apt cache to reduce image size
 RUN rm -rf /var/lib/apt/lists/*
 
-# Install WPScan (Ruby gem)
+# Install WPScan (with Ruby gem)
 RUN gem install wpscan --no-document
 
 # Install ProjectDiscovery httpx (prebuilt binary)
@@ -74,7 +74,7 @@ EXPOSE 8999
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
      CMD curl -fsS http://localhost:8999/health || exit 1
 
-# allservices.py uses local imports (ping_service, etc.), so run from mcp/
+# server.py uses local imports (ping_service, etc.), so run from mcp/
 WORKDIR /app/mcp
 #CMD ["fastmcp", "run", "/app/mcp/fastmcp.json", "--skip-env"]
 CMD ["python", "server.py"]
