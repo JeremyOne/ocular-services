@@ -42,7 +42,9 @@ class ServiceResponse:
         """
         return {
             "service": self.service,
-            "process_start_time": self.process_start_time,
+            "process_start_time": self.process_start_time.isoformat() if self.process_start_time else None,
+            "process_end_time": self.process_end_time.isoformat() if self.process_end_time else None,
+            "process_time_ms": self.process_time_ms,
             "target": self.target,
             "arguments": self.arguments,
             "return_code": self.return_code,
