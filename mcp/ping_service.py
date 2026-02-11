@@ -107,6 +107,15 @@ async def ping_host(host: str, count: int = 5, interval: float = 1.0, packet_siz
         if packet_size < 1 or packet_size > 65524:
             response.add_error("packet_size must be between 1 and 65524")
             return response
+        
+        # Check if ping is installed
+        try:
+            subprocess.run(["which", "ping"], check=True, capture_output=True)
+        except subprocess.CalledProcessError:
+            response.add_error("ping is not installed on the server")
+            response.return_code = -1
+            response.end_process_timer()
+            return response
 
         # Build command
         cmd = ["ping", "-c", str(count), "-i", str(interval), "-s", str(packet_size), host]

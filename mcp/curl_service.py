@@ -81,6 +81,15 @@ async def curl_request(url: str, method: str = "GET", headers: str = "", data: s
             response.add_error("url parameter is required")
             return response
         
+        # Check if curl is installed
+        try:
+            subprocess.run(["which", "curl"], check=True, capture_output=True)
+        except subprocess.CalledProcessError:
+            response.add_error("curl is not installed on the server")
+            response.return_code = -1
+            response.end_process_timer()
+            return response
+        
         # Build command
         cmd = ["curl"]
         

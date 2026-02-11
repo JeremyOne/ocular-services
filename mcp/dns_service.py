@@ -19,22 +19,26 @@ def get_service_info() -> dict:
         }
     }
 
-def dns_lookup_mcp(host: str, record_types: List[str]) -> dict:
+def dns_lookup_mcp(host: str, record_types: List[str], resolver=None) -> dict:
     """Perform DNS lookup for specified record types"""
     result = {}
+    
+    # Use provided resolver or default
+    if resolver is None:
+        resolver = dns.resolver
     
     for record_type in record_types:
         try:
             if record_type == "A":
                 # Lookup A records (IP addresses)
-                answers = dns.resolver.resolve(host, 'A')
+                answers = resolver.resolve(host, 'A')
                 result["a_records"] = [rdata.address for rdata in answers]
                 # Keep legacy format for compatibility
                 result["ip_addresses"] = result["a_records"]
                 
             elif record_type == "TXT":
                 # Lookup TXT records and search for email host (e.g., via SPF)
-                txt_answers = dns.resolver.resolve(host, 'TXT')
+                txt_answers = resolver.resolve(host, 'TXT')
                 txt_records = []
                 for rdata in txt_answers:
                     if hasattr(rdata, 'strings'):
@@ -55,28 +59,28 @@ def dns_lookup_mcp(host: str, record_types: List[str]) -> dict:
                 
             elif record_type == "MX":
                 # Lookup MX records (mail servers)
-                mx_answers = dns.resolver.resolve(host, 'MX')
+                mx_answers = resolver.resolve(host, 'MX')
                 result["mx_records"] = [f"{rdata.preference} {rdata.exchange}" for rdata in mx_answers]
                 
             elif record_type == "CNAME":
                 # Lookup CNAME records
-                cname_answers = dns.resolver.resolve(host, 'CNAME')
+                cname_answers = resolver.resolve(host, 'CNAME')
                 result["cname_records"] = [str(rdata) for rdata in cname_answers]
                 
             elif record_type == "NS":
                 # Lookup NS records (name servers)
-                ns_answers = dns.resolver.resolve(host, 'NS')
+                ns_answers = resolver.resolve(host, 'NS')
                 result["ns_records"] = [str(rdata) for rdata in ns_answers]
                 
             elif record_type == "PTR":
                 # Lookup PTR records (reverse DNS)
-                ptr_answers = dns.resolver.resolve(host, 'PTR')
+                ptr_answers = resolver.resolve(host, 'PTR')
                 result["ptr_records"] = [str(rdata) for rdata in ptr_answers]
                 
             else:
                 # Handle other record types generically
                 try:
-                    answers = dns.resolver.resolve(host, record_type)
+                    answers = resolver.resolve(host, record_type)
                     result[f"{record_type.lower()}_records"] = [str(rdata) for rdata in answers]
                 except Exception:
                     result[f"{record_type.lower()}_records"] = []
@@ -132,12 +136,13 @@ async def dns_lookup(host: str, record_types: Optional[str] = "A,TXT", timeout: 
             response.add_error("timeout cannot exceed 30 seconds")
             return response
         
-        # Set DNS resolver timeout
-        dns.resolver.default_resolver.timeout = timeout
-        dns.resolver.default_resolver.lifetime = timeout
+        # Configure DNS resolver with timeout
+        resolver = dns.resolver.Resolver()
+        resolver.timeout = timeout
+        resolver.lifetime = timeout
         
         # Perform DNS lookup
-        lookup_results = dns_lookup_mcp(host, record_types_list)
+        lookup_results = dns_lookup_mcp(host, record_types_list, resolver)
         
         # Create raw output summary
         raw_output_lines = []

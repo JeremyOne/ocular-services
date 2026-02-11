@@ -1,0 +1,873 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Ocular Agents MCP Services",
+  "description": "Comprehensive documentation for all Ocular Agents MCP server services and their parameters for LLM client consumption",
+  "version": "0.3.2",
+  "last_updated": "2026-01-28",
+  "server": {
+    "name": "Ocular Agents",
+    "protocol": "MCP (Model Context Protocol)",
+    "framework": "FastMCP",
+    "purpose": "Penetration testing and network discovery tools"
+  },
+  "common_response_schema": {
+    "type": "object",
+    "properties": {
+      "service": {
+        "type": "string",
+        "description": "Name of the service that generated the response"
+      },
+      "target": {
+        "type": "string",
+        "description": "The target IP, domain, or resource that was scanned"
+      },
+      "process_start_time": {
+        "type": "string",
+        "format": "date-time",
+        "description": "UTC timestamp when processing started"
+      },
+      "process_time_ms": {
+        "type": "integer",
+        "description": "Processing time in milliseconds"
+      },
+      "process_end_time": {
+        "type": "string",
+        "format": "date-time",
+        "description": "UTC timestamp when processing ended"
+      },
+      "arguments": {
+        "type": "object",
+        "description": "Dictionary of arguments passed to the service"
+      },
+      "raw_command": {
+        "type": "string",
+        "description": "The actual command executed"
+      },
+      "return_code": {
+        "type": "integer",
+        "description": "Exit code from service execution (0 = success)"
+      },
+      "raw_output": {
+        "type": "string",
+        "description": "Raw stdout from the service"
+      },
+      "raw_error": {
+        "type": "string",
+        "description": "Raw stderr from the service"
+      }
+    }
+  },
+  "services": {
+    "ping": {
+      "tool_name": "ping",
+      "description": "Network connectivity testing using ICMP ping. Tests network reachability, measures latency, and verifies host availability.",
+      "use_cases": [
+        "Test network reachability",
+        "Measure round-trip latency",
+        "Verify host availability",
+        "Diagnose network connectivity issues"
+      ],
+      "parameters": {
+        "host": {
+          "type": "string",
+          "required": true,
+          "description": "Target hostname or IP address to ping",
+          "examples": ["192.168.1.1", "example.com", "10.0.0.1"]
+        },
+        "count": {
+          "type": "integer",
+          "required": false,
+          "default": 5,
+          "minimum": 1,
+          "maximum": 99,
+          "description": "Number of ping packets to send"
+        },
+        "interval": {
+          "type": "number",
+          "required": false,
+          "default": 1.0,
+          "minimum": 0.01,
+          "maximum": 5.0,
+          "description": "Interval between packets in seconds"
+        },
+        "packet_size": {
+          "type": "integer",
+          "required": false,
+          "default": 56,
+          "minimum": 1,
+          "maximum": 65524,
+          "description": "Size of data bytes to send"
+        },
+        "AsJson": {
+          "type": "boolean",
+          "required": false,
+          "default": false,
+          "description": "Return response as JSON string instead of string representation"
+        }
+      },
+      "example_calls": [
+        {
+          "description": "Basic ping with 10 packets",
+          "call": "ping(host=\"192.168.1.1\", count=10)"
+        },
+        {
+          "description": "Fast ping with small interval",
+          "call": "ping(host=\"example.com\", count=20, interval=0.2, AsJson=true)"
+        }
+      ],
+      "expected_output": "ICMP echo reply statistics including packet loss percentage, round-trip times (min/avg/max/mdev)"
+    },
+    "time": {
+      "tool_name": "time",
+      "description": "Get the current date and time from the server. Useful for timestamp synchronization and time-based operations.",
+      "use_cases": [
+        "Synchronize timestamps",
+        "Verify server time",
+        "Log time-based operations",
+        "Time zone verification"
+      ],
+      "parameters": {
+        "InUTC": {
+          "type": "boolean",
+          "required": true,
+          "description": "Return time in UTC timezone if true, local server time if false"
+        },
+        "AsJson": {
+          "type": "boolean",
+          "required": true,
+          "description": "Return response as JSON object with 'datetime' key"
+        }
+      },
+      "example_calls": [
+        {
+          "description": "Get UTC time as JSON",
+          "call": "time(InUTC=true, AsJson=true)"
+        },
+        {
+          "description": "Get local time as string",
+          "call": "time(InUTC=false, AsJson=false)"
+        }
+      ],
+      "expected_output": "ISO 8601 formatted datetime string (e.g., 2026-01-28T14:30:00.000000+00:00)"
+    },
+    "curl": {
+      "tool_name": "curl",
+      "description": "Make HTTP requests using curl for penetration testing and discovery. Supports all HTTP methods, custom headers, and SSL options.",
+      "use_cases": [
+        "Web application testing",
+        "API endpoint probing",
+        "Header analysis",
+        "SSL/TLS testing",
+        "Authentication testing",
+        "Response analysis"
+      ],
+      "parameters": {
+        "url": {
+          "type": "string",
+          "required": true,
+          "description": "Target URL to request",
+          "examples": ["https://example.com", "http://api.example.com/v1/users"]
+        },
+        "method": {
+          "type": "string",
+          "required": false,
+          "default": "GET",
+          "enum": ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"],
+          "description": "HTTP method to use"
+        },
+        "headers": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "Custom headers to send (semicolon-separated)",
+          "examples": ["Accept: application/json;Authorization: Bearer token123"]
+        },
+        "data": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "POST/PUT/PATCH data to send",
+          "examples": ["{\"key\":\"value\"}", "username=admin&password=test"]
+        },
+        "follow_redirects": {
+          "type": "boolean",
+          "required": false,
+          "default": false,
+          "description": "Follow HTTP redirects (curl -L flag)"
+        },
+        "verbose": {
+          "type": "boolean",
+          "required": false,
+          "default": false,
+          "description": "Enable verbose output showing request/response details (curl -v flag)"
+        },
+        "insecure": {
+          "type": "boolean",
+          "required": false,
+          "default": false,
+          "description": "Allow insecure SSL connections, skip certificate verification (curl -k flag)"
+        },
+        "user_agent": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "Custom User-Agent header string"
+        },
+        "headers_only": {
+          "type": "boolean",
+          "required": false,
+          "default": false,
+          "description": "Get headers only, no response body (curl -I flag)"
+        },
+        "AsJson": {
+          "type": "boolean",
+          "required": false,
+          "default": false,
+          "description": "Return response as JSON string"
+        }
+      },
+      "example_calls": [
+        {
+          "description": "Simple GET request",
+          "call": "curl(url=\"https://example.com\")"
+        },
+        {
+          "description": "POST request with JSON data",
+          "call": "curl(url=\"https://api.example.com/users\", method=\"POST\", headers=\"Content-Type: application/json\", data=\"{\\\"name\\\":\\\"test\\\"}\")"
+        },
+        {
+          "description": "Get headers only with redirect following",
+          "call": "curl(url=\"https://example.com\", headers_only=true, follow_redirects=true, AsJson=true)"
+        }
+      ],
+      "expected_output": "HTTP response including status code, headers (if verbose or headers_only), and body content"
+    },
+    "dns": {
+      "tool_name": "dns",
+      "description": "Perform DNS lookups for various record types. Essential for DNS enumeration, mail server discovery, and domain reconnaissance.",
+      "use_cases": [
+        "DNS enumeration",
+        "Mail server discovery (MX records)",
+        "Domain reconnaissance",
+        "Subdomain analysis",
+        "SPF/DKIM verification",
+        "Name server identification"
+      ],
+      "parameters": {
+        "host": {
+          "type": "string",
+          "required": true,
+          "description": "Target hostname or domain to look up",
+          "examples": ["example.com", "mail.example.com", "192.168.1.1"]
+        },
+        "record_types": {
+          "type": "string",
+          "required": false,
+          "default": "A,TXT",
+          "description": "Comma-separated list of DNS record types to query",
+          "supported_types": {
+            "A": "IPv4 address records",
+            "AAAA": "IPv6 address records",
+            "MX": "Mail exchange records",
+            "TXT": "Text records (SPF, DKIM, etc.)",
+            "CNAME": "Canonical name records",
+            "NS": "Name server records",
+            "PTR": "Pointer records (reverse DNS)",
+            "SOA": "Start of Authority records",
+            "SRV": "Service records"
+          }
+        },
+        "timeout": {
+          "type": "number",
+          "required": false,
+          "default": 5.0,
+          "minimum": 1,
+          "maximum": 30,
+          "description": "DNS query timeout in seconds"
+        },
+        "AsJson": {
+          "type": "boolean",
+          "required": false,
+          "default": false,
+          "description": "Return response as JSON string"
+        }
+      },
+      "example_calls": [
+        {
+          "description": "Basic A and TXT record lookup",
+          "call": "dns(host=\"example.com\")"
+        },
+        {
+          "description": "Comprehensive DNS enumeration",
+          "call": "dns(host=\"example.com\", record_types=\"A,AAAA,MX,TXT,NS,CNAME\", timeout=10.0, AsJson=true)"
+        }
+      ],
+      "expected_output": "DNS records organized by type with associated values, including IP addresses, mail servers, and text records"
+    },
+    "whois": {
+      "tool_name": "whois",
+      "description": "WHOIS domain registration information lookup. Retrieves domain ownership, registrar, and registration details.",
+      "use_cases": [
+        "Domain ownership research",
+        "Registrar identification",
+        "Registration date analysis",
+        "Expiration date checking",
+        "Contact information gathering"
+      ],
+      "parameters": {
+        "domain": {
+          "type": "string",
+          "required": true,
+          "description": "Domain name to lookup (e.g., example.com). Protocol and path are automatically stripped.",
+          "examples": ["example.com", "https://example.com", "subdomain.example.com"]
+        },
+        "options": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "WHOIS command options",
+          "available_options": {
+            "-R": "Show registrar information only",
+            "-a": "Show administrative contact information",
+            "-t": "Show technical contact information",
+            "-H": "Hide legal disclaimers, show full details"
+          }
+        },
+        "server": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "Specific WHOIS server to query (auto-detected if not specified)"
+        },
+        "timeout": {
+          "type": "integer",
+          "required": false,
+          "default": 30,
+          "minimum": 1,
+          "maximum": 120,
+          "description": "Command timeout in seconds"
+        },
+        "AsJson": {
+          "type": "boolean",
+          "required": false,
+          "default": false,
+          "description": "Return response as JSON string"
+        }
+      },
+      "example_calls": [
+        {
+          "description": "Basic WHOIS lookup",
+          "call": "whois(domain=\"example.com\")"
+        },
+        {
+          "description": "Full details without disclaimers",
+          "call": "whois(domain=\"example.com\", options=\"-H\", AsJson=true)"
+        }
+      ],
+      "expected_output": "Domain registration information including registrar, creation date, expiration date, name servers, and contact information"
+    },
+    "wpscan": {
+      "tool_name": "wpscan",
+      "description": "WordPress security scanner using WPScan. Performs comprehensive WordPress vulnerability assessment, plugin/theme enumeration, and user discovery.",
+      "use_cases": [
+        "WordPress vulnerability assessment",
+        "Plugin enumeration and vulnerability detection",
+        "Theme enumeration and vulnerability detection",
+        "User enumeration",
+        "WordPress version detection",
+        "Security configuration analysis"
+      ],
+      "parameters": {
+        "url": {
+          "type": "string",
+          "required": true,
+          "description": "Target WordPress URL. Protocol (http:// or https://) is added automatically if missing.",
+          "examples": ["https://wordpress-site.com", "http://blog.example.com"]
+        },
+        "options": {
+          "type": "string",
+          "required": false,
+          "default": "basic",
+          "description": "Scan type preset",
+          "available_options": {
+            "basic": "Basic scan for plugins, themes, users (mixed detection)",
+            "plugins": "Aggressive plugin enumeration",
+            "themes": "Aggressive theme enumeration",
+            "users": "User enumeration only",
+            "vulns": "Scan for vulnerable plugins and themes (aggressive)",
+            "full": "Full comprehensive scan - all enumerations (slow but thorough)",
+            "passive": "Passive scan (less detectable)"
+          }
+        },
+        "api_token": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "WordPress Vulnerability Database API token for enhanced vulnerability data"
+        },
+        "timeout": {
+          "type": "integer",
+          "required": false,
+          "default": 300,
+          "minimum": 60,
+          "maximum": 1800,
+          "description": "Command timeout in seconds"
+        },
+        "force": {
+          "type": "boolean",
+          "required": false,
+          "default": false,
+          "description": "Force scan even if WordPress is not detected"
+        },
+        "random_user_agent": {
+          "type": "boolean",
+          "required": false,
+          "default": false,
+          "description": "Use random user agent for each request"
+        },
+        "AsJson": {
+          "type": "boolean",
+          "required": false,
+          "default": false,
+          "description": "Return response as JSON string"
+        }
+      },
+      "example_calls": [
+        {
+          "description": "Basic WordPress scan",
+          "call": "wpscan(url=\"https://wordpress-site.com\")"
+        },
+        {
+          "description": "Vulnerability scan with API token",
+          "call": "wpscan(url=\"https://wordpress-site.com\", options=\"vulns\", api_token=\"your-api-token\", AsJson=true)"
+        },
+        {
+          "description": "Full comprehensive scan",
+          "call": "wpscan(url=\"https://wordpress-site.com\", options=\"full\", force=true, random_user_agent=true, timeout=900)"
+        }
+      ],
+      "expected_output": "WordPress version, detected plugins/themes with versions, enumerated users, identified vulnerabilities with CVE references"
+    },
+    "httpx": {
+      "tool_name": "httpx",
+      "description": "Fast HTTP/HTTPS service discovery and analysis using ProjectDiscovery's httpx. Ideal for bulk URL probing and technology detection.",
+      "use_cases": [
+        "Web service discovery",
+        "Technology stack detection",
+        "Bulk URL probing",
+        "HTTP response analysis",
+        "Port scanning for web services",
+        "Title and content extraction"
+      ],
+      "parameters": {
+        "targets": {
+          "type": "string",
+          "required": true,
+          "description": "Target hosts/URLs to probe. Comma-separated for multiple targets.",
+          "examples": ["example.com", "192.168.1.1", "example.com,test.com,192.168.1.0/24"]
+        },
+        "options": {
+          "type": "string",
+          "required": false,
+          "default": "basic",
+          "description": "Scan type preset",
+          "available_options": {
+            "basic": "Status code, content length, page title",
+            "detailed": "Basic + technology detection, web server, response time",
+            "headers": "Basic + response headers included",
+            "hashes": "Basic + MD5, SHA256, SimHash of response body",
+            "comprehensive": "All options including JARM fingerprint, location, headers"
+          }
+        },
+        "ports": {
+          "type": "string",
+          "required": false,
+          "default": "80,443,8080,8443",
+          "description": "Ports to probe (comma-separated)",
+          "examples": ["80,443", "80,443,8080,8443,8000,9000"]
+        },
+        "paths": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "Paths to test (comma-separated)",
+          "examples": ["/api", "/admin,/login,/api/v1"]
+        },
+        "method": {
+          "type": "string",
+          "required": false,
+          "default": "GET",
+          "description": "HTTP method to use for requests"
+        },
+        "timeout": {
+          "type": "integer",
+          "required": false,
+          "default": 10,
+          "minimum": 5,
+          "maximum": 120,
+          "description": "Request timeout per target in seconds"
+        },
+        "threads": {
+          "type": "integer",
+          "required": false,
+          "default": 50,
+          "minimum": 1,
+          "maximum": 100,
+          "description": "Number of concurrent threads"
+        },
+        "rate_limit": {
+          "type": "integer",
+          "required": false,
+          "default": 150,
+          "minimum": 1,
+          "maximum": 1000,
+          "description": "Maximum requests per second"
+        },
+        "retries": {
+          "type": "integer",
+          "required": false,
+          "default": 2,
+          "minimum": 0,
+          "maximum": 5,
+          "description": "Number of retry attempts for failed requests"
+        },
+        "AsJson": {
+          "type": "boolean",
+          "required": false,
+          "default": false,
+          "description": "Return response as JSON string"
+        }
+      },
+      "example_calls": [
+        {
+          "description": "Basic probe of single target",
+          "call": "httpx(targets=\"example.com\")"
+        },
+        {
+          "description": "Detailed scan of multiple targets",
+          "call": "httpx(targets=\"example.com,test.com\", options=\"detailed\", ports=\"80,443,8080\", AsJson=true)"
+        },
+        {
+          "description": "Comprehensive scan with rate limiting",
+          "call": "httpx(targets=\"192.168.1.0/24\", options=\"comprehensive\", threads=25, rate_limit=50, timeout=15)"
+        }
+      ],
+      "expected_output": "HTTP response details including status codes, content length, page titles, technologies detected, and server information (JSON lines format)"
+    },
+    "nbtscan": {
+      "tool_name": "nbtscan",
+      "description": "NetBIOS name scanner for Windows network discovery. Discovers Windows hosts, workgroups, and NetBIOS services.",
+      "use_cases": [
+        "Windows network enumeration",
+        "NetBIOS name resolution",
+        "Workgroup and domain discovery",
+        "Windows service detection",
+        "Internal network mapping"
+      ],
+      "parameters": {
+        "target": {
+          "type": "string",
+          "required": true,
+          "description": "IP address, range, or subnet to scan",
+          "formats": {
+            "single_ip": "192.168.1.1 - Scan single host",
+            "ip_range": "192.168.1.1-254 - Scan range of IPs",
+            "cidr": "192.168.1.0/24 - Scan entire subnet"
+          }
+        },
+        "options": {
+          "type": "string",
+          "required": false,
+          "default": "basic",
+          "description": "Scan options preset",
+          "available_options": {
+            "basic": "Standard NetBIOS name scan",
+            "verbose": "Verbose output with all names received",
+            "script": "Script-friendly output with field separator",
+            "hosts": "Output in /etc/hosts format",
+            "lmhosts": "Output in lmhosts format"
+          }
+        },
+        "timeout": {
+          "type": "integer",
+          "required": false,
+          "default": 1000,
+          "minimum": 100,
+          "maximum": 30000,
+          "description": "Response timeout in milliseconds"
+        },
+        "verbose": {
+          "type": "boolean",
+          "required": false,
+          "default": false,
+          "description": "Enable verbose output (print all names)"
+        },
+        "retransmits": {
+          "type": "integer",
+          "required": false,
+          "default": 0,
+          "minimum": 0,
+          "maximum": 10,
+          "description": "Number of retransmits for unreliable networks"
+        },
+        "use_local_port": {
+          "type": "boolean",
+          "required": false,
+          "default": false,
+          "description": "Use local port 137 for scans (requires root/administrator)"
+        },
+        "AsJson": {
+          "type": "boolean",
+          "required": false,
+          "default": false,
+          "description": "Return response as JSON string"
+        }
+      },
+      "example_calls": [
+        {
+          "description": "Scan single host",
+          "call": "nbtscan(target=\"192.168.1.1\")"
+        },
+        {
+          "description": "Scan subnet with verbose output",
+          "call": "nbtscan(target=\"192.168.1.0/24\", options=\"verbose\", timeout=2000, AsJson=true)"
+        }
+      ],
+      "expected_output": "Discovered hosts with NetBIOS names, computer names, domains/workgroups, and services"
+    },
+    "nmap": {
+      "tool_name": "nmap",
+      "description": "Network Mapper for network discovery and security auditing. The industry-standard tool for port scanning, service detection, and vulnerability assessment.",
+      "use_cases": [
+        "Port scanning",
+        "Service version detection",
+        "Operating system fingerprinting",
+        "Vulnerability scanning",
+        "Network mapping",
+        "Security auditing"
+      ],
+      "parameters": {
+        "target": {
+          "type": "string",
+          "required": true,
+          "description": "Target host, IP, or network range to scan",
+          "formats": {
+            "single_ip": "192.168.1.1 - Scan single host",
+            "hostname": "example.com - Scan by hostname",
+            "ip_range": "192.168.1.1-254 - Scan range",
+            "cidr": "192.168.1.0/24 - Scan subnet",
+            "multiple": "192.168.1.1 192.168.1.2 - Space-separated targets"
+          }
+        },
+        "scan_type": {
+          "type": "string",
+          "required": false,
+          "default": "fast",
+          "description": "Type of scan preset",
+          "available_options": {
+            "fast": "Fast scan of top 100 ports (-F -Pn)",
+            "service": "Service version detection on top 20 ports (-sV --top-ports 20)",
+            "stealth": "Stealth SYN scan without pinging (-sS -Pn)",
+            "rdp": "RDP vulnerability scan on port 3389 (-p 3389 --script rdp-*)",
+            "aggressive": "Aggressive scan with OS detection (-A -T4)",
+            "vuln": "CVE vulnerability scanning (-Pn --script vuln)"
+          }
+        },
+        "timeout": {
+          "type": "integer",
+          "required": false,
+          "default": 240,
+          "minimum": 30,
+          "maximum": 1800,
+          "description": "Command timeout in seconds"
+        },
+        "ports": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "Specific ports to scan (overrides scan_type port selection)",
+          "examples": ["22,80,443", "1-1000", "22,80,443,3389,8080"]
+        },
+        "scripts": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "Additional nmap NSE scripts to run",
+          "examples": ["http-title", "ssh-auth-methods", "vuln,http-enum"]
+        },
+        "AsJson": {
+          "type": "boolean",
+          "required": false,
+          "default": false,
+          "description": "Return response as JSON string"
+        }
+      },
+      "example_calls": [
+        {
+          "description": "Fast scan of common ports",
+          "call": "nmap(target=\"192.168.1.1\")"
+        },
+        {
+          "description": "Service version detection",
+          "call": "nmap(target=\"192.168.1.1\", scan_type=\"service\", AsJson=true)"
+        },
+        {
+          "description": "Custom port scan with scripts",
+          "call": "nmap(target=\"192.168.1.0/24\", scan_type=\"fast\", ports=\"22,80,443,3389\", scripts=\"http-title,ssh-auth-methods\", timeout=600)"
+        },
+        {
+          "description": "Vulnerability scan",
+          "call": "nmap(target=\"example.com\", scan_type=\"vuln\", timeout=900, AsJson=true)"
+        }
+      ],
+      "expected_output": "Port states (open/closed/filtered), service versions, OS detection results, NSE script output"
+    },
+    "nikto": {
+      "tool_name": "nikto",
+      "description": "Web vulnerability scanner for comprehensive security testing. Identifies web server misconfigurations, vulnerabilities, and information disclosure.",
+      "use_cases": [
+        "Web server vulnerability assessment",
+        "Misconfiguration detection",
+        "Information disclosure detection",
+        "CGI vulnerability scanning",
+        "SSL/TLS security testing",
+        "Virtual host scanning"
+      ],
+      "parameters": {
+        "target": {
+          "type": "string",
+          "required": true,
+          "description": "Target URL or hostname to scan",
+          "examples": ["https://example.com", "192.168.1.1", "http://test.example.com"]
+        },
+        "scan_type": {
+          "type": "string",
+          "required": false,
+          "default": "basic",
+          "description": "Type of scan preset",
+          "available_options": {
+            "basic": "Standard host scan",
+            "ssl": "Force SSL scan",
+            "cgi": "Check all CGI directories (-C all)",
+            "files": "Look for interesting files (tuning 1)",
+            "misconfig": "Look for misconfigurations (tuning 2)",
+            "disclosure": "Look for information disclosure (tuning 3)",
+            "comprehensive": "All tuning options (1,2,3,4,5,6,7,8,9)",
+            "fast": "Quick scan with reduced timeouts"
+          }
+        },
+        "port": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "Port to scan (auto-detected from URL if not specified)"
+        },
+        "ssl": {
+          "type": "boolean",
+          "required": false,
+          "default": false,
+          "description": "Force SSL mode (auto-detected from https:// or port 443)"
+        },
+        "timeout": {
+          "type": "integer",
+          "required": false,
+          "default": 10,
+          "minimum": 5,
+          "maximum": 300,
+          "description": "Request timeout in seconds"
+        },
+        "tuning": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "Nikto tuning options (comma-separated, 1-9)",
+          "tuning_options": {
+            "1": "Interesting files/Seen in logs",
+            "2": "Misconfiguration/Default files",
+            "3": "Information Disclosure",
+            "4": "Injection (XSS/Script/HTML)",
+            "5": "Remote File Retrieval - Inside Web Root",
+            "6": "Denial of Service",
+            "7": "Remote File Retrieval - Server Wide",
+            "8": "Command Execution/Remote Shell",
+            "9": "SQL Injection"
+          }
+        },
+        "plugins": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "Specific nikto plugins to run"
+        },
+        "vhost": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "Virtual host header to use for the scan"
+        },
+        "AsJson": {
+          "type": "boolean",
+          "required": false,
+          "default": false,
+          "description": "Return response as JSON string"
+        }
+      },
+      "example_calls": [
+        {
+          "description": "Basic web vulnerability scan",
+          "call": "nikto(target=\"https://example.com\")"
+        },
+        {
+          "description": "Comprehensive scan",
+          "call": "nikto(target=\"https://example.com\", scan_type=\"comprehensive\", timeout=30, AsJson=true)"
+        },
+        {
+          "description": "Virtual host scan with specific tuning",
+          "call": "nikto(target=\"192.168.1.1\", port=\"8080\", ssl=false, tuning=\"1,2,3\", vhost=\"www.example.com\")"
+        }
+      ],
+      "expected_output": "Identified vulnerabilities, misconfigurations, server information, interesting files, and security issues"
+    }
+  },
+  "workflow_recommendations": {
+    "reconnaissance_flow": [
+      "1. dns - Enumerate DNS records to identify hosts",
+      "2. whois - Gather domain registration information",
+      "3. ping - Verify host availability",
+      "4. nmap (fast) - Quick port discovery",
+      "5. httpx - Identify web services",
+      "6. nmap (service) - Detailed service detection"
+    ],
+    "web_application_testing": [
+      "1. httpx - Identify web servers and technologies",
+      "2. curl - Manual endpoint testing",
+      "3. nikto - Web vulnerability scanning",
+      "4. wpscan - WordPress-specific testing (if applicable)"
+    ],
+    "internal_network_discovery": [
+      "1. ping - Host discovery",
+      "2. nbtscan - Windows/NetBIOS enumeration",
+      "3. nmap (fast) - Port scanning",
+      "4. nmap (service) - Service identification"
+    ]
+  },
+  "error_handling": {
+    "parameter_validation": "Services validate all parameters and return descriptive error messages",
+    "tool_availability": "Services check if underlying tools are installed and provide installation instructions",
+    "timeout_handling": "Services respect timeout parameters and return partial results on timeout",
+    "error_indicators": {
+      "return_code_non_zero": "Indicates command execution failure",
+      "raw_error_populated": "Contains error details from the underlying tool",
+      "is_successful_method": "ServiceResponse.is_successful() returns false on failure"
+    }
+  },
+  "best_practices": {
+    "1": "Always check return_code (0 = success) before processing results",
+    "2": "Use AsJson=true for structured, parseable responses",
+    "3": "Respect timeout values - long scans (nmap vuln, wpscan full) need extended timeouts",
+    "4": "Use appropriate rate_limit and threads for httpx to avoid overwhelming targets",
+    "5": "Validate target formats before calling services",
+    "6": "Chain services logically: DNS → Ping → Port scan → Service scan",
+    "7": "Store raw_output for detailed analysis when structured parsing is insufficient"
+  }
+}

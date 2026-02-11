@@ -4,7 +4,7 @@ A reusable class for representing structured responses from security scanning se
 """
 from dataclasses import dataclass, field
 from typing import Dict, Any, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 @dataclass
@@ -23,7 +23,7 @@ class ServiceResponse:
     """
     service: str
     target: str
-    process_start_time: datetime = field(default_factory=datetime.utcnow)
+    process_start_time: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     process_time_ms: int = 0
     process_end_time: Optional[datetime] = None
     arguments: Dict[str, Any] = field(default_factory=dict)
@@ -42,7 +42,9 @@ class ServiceResponse:
         """
         return {
             "service": self.service,
-            "process_start_time": self.process_start_time,
+            "process_start_time": self.process_start_time.isoformat() if self.process_start_time else None,
+            "process_end_time": self.process_end_time.isoformat() if self.process_end_time else None,
+            "process_time_ms": self.process_time_ms,
             "target": self.target,
             "arguments": self.arguments,
             "return_code": self.return_code,
@@ -65,7 +67,7 @@ class ServiceResponse:
         return cls(
             service=data.get("service", ""),
             target=data.get("target", ""),
-            process_start_time=data.get("process_start_time", datetime.utcnow()),
+            process_start_time=data.get("process_start_time", datetime.now(timezone.utc)),
             process_time_ms=data.get("process_time_ms", 0),
             process_end_time=data.get("process_end_time"),
             arguments=data.get("arguments", {}),
@@ -97,7 +99,7 @@ class ServiceResponse:
         """
         Set the process end time to current time and calculate process_time_ms.
         """
-        self.process_end_time = datetime.utcnow()
+        self.process_end_time = datetime.now(timezone.utc)
         self.process_time_ms = int((self.process_end_time - self.process_start_time).total_seconds() * 1000)
 
     def add_error(self, error_message: str, return_code: Optional[int] = None):
