@@ -5,9 +5,19 @@ A set of MCP services focused on network and security scanning. Tested on ubuntu
 
 ## Docker
 
-Build:
+Build (with unit tests):
 ```
 docker build -t ocular-services .
+```
+
+Build without running tests (skip test stage):
+```
+docker build --target production -t ocular-services .
+```
+
+Build and stop at test stage (to verify tests pass):
+```
+docker build --target test -t ocular-services-test .
 ```
 
 Run (port 8999):
@@ -28,6 +38,11 @@ docker compose up --build
 Quick check:
 ```
 curl http://localhost:8999/health
+```
+
+Run unit tests via HTTP:
+```
+curl http://localhost:8999/test
 ```
 
 ## Using the services
@@ -107,6 +122,7 @@ sudo gem install wpscan
 ```
 
 ## Testing
+Warning: the unit tests call actual commands and use networking including doing things like resolving dns, and curl on example.com and running nmap on localhost. 
 
 Run unit tests:
 ```
@@ -127,6 +143,14 @@ python -m pytest tests/test_ping_service.py -v
 The test suite includes:
 - `test_service_response.py` - ServiceResponse class tests
 - `test_ping_service.py` - Ping service validation and execution tests
+- `test_dns_service.py` - DNS lookup tests
+- `test_whois_service.py` - WHOIS service tests
+- `test_curl_service.py` - cURL service tests
+- `test_nmap_service.py` - Nmap service tests
+- `test_httpx_service.py` - HTTPX service tests
+- `test_nbtscan_service.py` - NBTScan service tests
+- `test_nikto_service.py` - Nikto service tests
+- `test_wpscan_service.py` - WPScan service tests
 - `test_dns_service.py` - DNS lookup tests
 - `test_whois_service.py` - WHOIS service tests
 - `test_curl_service.py` - cURL service tests

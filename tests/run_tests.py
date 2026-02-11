@@ -13,7 +13,11 @@ from tests import (
     test_dns_service,
     test_whois_service,
     test_curl_service,
-    test_nmap_service
+    test_nmap_service,
+    test_httpx_service,
+    test_nbtscan_service,
+    test_nikto_service,
+    test_wpscan_service
 )
 
 
@@ -29,6 +33,10 @@ def run_all_tests():
     suite.addTests(loader.loadTestsFromModule(test_whois_service))
     suite.addTests(loader.loadTestsFromModule(test_curl_service))
     suite.addTests(loader.loadTestsFromModule(test_nmap_service))
+    suite.addTests(loader.loadTestsFromModule(test_httpx_service))
+    suite.addTests(loader.loadTestsFromModule(test_nbtscan_service))
+    suite.addTests(loader.loadTestsFromModule(test_nikto_service))
+    suite.addTests(loader.loadTestsFromModule(test_wpscan_service))
     
     # Run tests with verbose output
     runner = unittest.TextTestRunner(verbosity=2)

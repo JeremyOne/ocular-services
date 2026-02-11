@@ -1,7 +1,8 @@
 # Ocular Services (FastMCP) - container image
-# Runs the unified server in mcp/allservices.py on port 8999
+# Runs the unified server in mcp/server.py on port 8999
 
-FROM python:3.12-slim
+# Base stage with all dependencies
+FROM python:3.12-slim AS base
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
@@ -66,7 +67,22 @@ RUN curl -fsSL -o /tmp/httpx.zip \
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Test stage - runs unit tests
+FROM base AS test
+
+# Copy test files and source code
+COPY tests ./tests
+COPY mcp ./mcp
+
+# Run unit tests
+WORKDIR /app
+RUN python -m pytest tests/ -v || python tests/run_tests.py
+
+# Final production stage
+FROM base AS production
+
 # App code
+COPY tests ./tests
 COPY mcp ./mcp
 
 EXPOSE 8999
