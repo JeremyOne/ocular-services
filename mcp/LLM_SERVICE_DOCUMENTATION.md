@@ -470,6 +470,6 @@ if response.return_code != 0 or response.raw_error:
 
 ## Version Information
 
-- **Documentation Version:** 0.2.0
+- **Documentation Version:** 0.3.2
 - **Last Updated:** February 10, 2026
 - **Compatible MCP Version:** FastMCP

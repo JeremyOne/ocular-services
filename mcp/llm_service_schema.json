@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Ocular Agents MCP Services",
   "description": "Comprehensive documentation for all Ocular Agents MCP server services and their parameters for LLM client consumption",
-  "version": "1.0.0",
+  "version": "0.3.2",
   "last_updated": "2026-01-28",
   "server": {
     "name": "Ocular Agents",

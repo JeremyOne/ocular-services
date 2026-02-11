@@ -56,7 +56,8 @@ async def detailed_log_handler(message: LogMessage):
 # This server provides access to multiple penetration testing tools
 mcp = FastMCP(
     name="Ocular Agents",
-    instructions="This MCP server provides access to multiple penetration testing and network discovery tools."
+    instructions="This MCP server provides access to multiple penetration testing and network discovery tools.",
+    version="0.3.2"
     )
 
 # Ping Service Endpoint

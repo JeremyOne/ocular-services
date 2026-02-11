@@ -3,6 +3,19 @@ A set of MCP services focused on network and security scanning. Tested on ubuntu
 
 `python mcp/server.py` to start all services.
 
+## Version Management
+
+Update version across all project files:
+```powershell
+.\update-version.ps1 -Version "1.0.0"
+```
+
+This updates:
+- `mcp/LLM_SERVICE_DOCUMENTATION.md` - Documentation version and date
+- `mcp/llm_service_schema.json` - Schema version and last_updated
+- `mcp/server.py` - FastMCP server version
+- `VERSION` - Version file
+
 ## Docker
 
 Build (with unit tests):
