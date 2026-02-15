@@ -1,6 +1,8 @@
 from typing import Optional
 import subprocess
 from service_response import ServiceResponse
+from fastmcp import Context
+from utility import execute_command
 
 # nikto - Web Server Scanner version 2.1.5
 # Web vulnerability scanner that performs comprehensive tests
@@ -35,7 +37,8 @@ def get_service_info() -> dict:
     }
 
 async def nikto_scan(target: str, scan_type: str = "basic", port: str = "", ssl: bool = False, 
-                     timeout: int = 10, tuning: str = "", plugins: str = "", vhost: str = "") -> ServiceResponse:
+                     timeout: int = 10, tuning: str = "", plugins: str = "", vhost: str = "",
+                     ctx: Context = None) -> ServiceResponse:
     """Perform web vulnerability scan using nikto.
     
     Parameters:
@@ -97,83 +100,61 @@ async def nikto_scan(target: str, scan_type: str = "basic", port: str = "", ssl:
             response.add_error("timeout cannot exceed 300 seconds")
             return response
         
-        # Check if nikto is installed
-        try:
-            subprocess.run(["which", "nikto"], check=True, capture_output=True)
-        except subprocess.CalledProcessError:
-            response.add_error("nikto is not installed. Please install it with 'sudo apt-get install nikto'")
-            response.return_code = -1
-            response.end_process_timer()
-            return response
-        
         # Map scan types to nikto options
         scan_options = {
-            "basic": [],
-            "ssl": ["-ssl"],
-            "cgi": ["-C", "all"],
-            "files": ["-Tuning", "1"],
-            "misconfig": ["-Tuning", "2"],
-            "disclosure": ["-Tuning", "3"],
-            "comprehensive": ["-Tuning", "1,2,3,4,5,6,7,8,9"],
-            "fast": ["-timeout", "5"]
+            "basic": "",
+            "ssl": "-ssl",
+            "cgi": "-C all",
+            "files": "-Tuning 1",
+            "misconfig": "-Tuning 2",
+            "disclosure": "-Tuning 3",
+            "comprehensive": "-Tuning 1,2,3,4,5,6,7,8,9",
+            "fast": "-timeout 5"
         }
         
         # Build command
-        cmd = ["nikto", "-h", target]
+        cmd_parts = ["nikto", "-h", target]
         
         # Add scan type options
-        if scan_type in scan_options:
-            cmd.extend(scan_options[scan_type])
+        if scan_type in scan_options and scan_options[scan_type]:
+            cmd_parts.append(scan_options[scan_type])
         
         # Add SSL option
         if ssl:
-            cmd.extend(["-ssl"])
+            cmd_parts.append("-ssl")
         
         # Add port
         if port:
-            cmd.extend(["-port", str(port)])
+            cmd_parts.extend(["-port", str(port)])
         
         # Add timeout
-        cmd.extend(["-timeout", str(timeout)])
+        cmd_parts.extend(["-timeout", str(timeout)])
         
         # Add custom tuning
         if tuning:
-            cmd.extend(["-Tuning", tuning])
+            cmd_parts.extend(["-Tuning", tuning])
         
         # Add specific plugins
         if plugins:
-            cmd.extend(["-Plugins", plugins])
+            cmd_parts.extend(["-Plugins", plugins])
         
         # Add virtual host
         if vhost:
-            cmd.extend(["-vhost", vhost])
+            cmd_parts.extend(["-vhost", vhost])
         
         # Add output format for better parsing
-        cmd.extend(["-Format", "txt"])
+        cmd_parts.extend(["-Format", "txt"])
         
-        response.raw_command = " ".join(cmd)
+        cmd = " ".join(cmd_parts)
         
-        # Execute command
-        result = subprocess.run(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            timeout=timeout + 60  # Add buffer time for nikto overhead
+        # Execute command with real-time output processing
+        return await execute_command(
+            cmd=cmd,
+            response=response,
+            ctx=ctx,
+            timeout=timeout + 60,  # Add buffer time for nikto overhead
+            expected_lines=100
         )
-        
-        raw_output = result.stdout if result.stdout else ""
-        raw_error = result.stderr if result.stderr else ""
-        
-        # Combine stdout and stderr for nikto (it uses both)
-        combined_output = raw_output + "\n" + raw_error
-        
-        response.raw_output = combined_output
-        response.raw_error = ""  # Combined into raw_output for nikto
-        response.return_code = result.returncode
-        response.end_process_timer()
-        
-        return response
         
     except Exception as e:
         

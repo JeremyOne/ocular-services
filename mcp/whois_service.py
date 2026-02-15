@@ -1,6 +1,8 @@
 from typing import Optional
 import subprocess
 from service_response import ServiceResponse
+from fastmcp import Context
+from utility import execute_command
 
 # whois - WHOIS domain lookup tool
 # Usage: whois [options] domain
@@ -30,7 +32,8 @@ def get_service_info() -> dict:
         }
     }
 
-async def whois_lookup(domain: str, options: str = "", server: str = "", timeout: int = 30) -> ServiceResponse:
+async def whois_lookup(domain: str, options: str = "", server: str = "", timeout: int = 30,
+                       ctx: Context = None) -> ServiceResponse:
     """Perform WHOIS lookup on a domain to get registration information.
     
     Parameters:
@@ -80,47 +83,30 @@ async def whois_lookup(domain: str, options: str = "", server: str = "", timeout
             response.add_error("timeout cannot exceed 120 seconds")
             return response
         
-        # Check if whois is installed
-        try:
-            subprocess.run(["which", "whois"], check=True, capture_output=True)
-        except subprocess.CalledProcessError:
-            response.add_error("whois is not installed. Please install it with 'sudo apt-get install whois'")
-            response.return_code = -1
-            response.end_process_timer()
-            return response
-        
         # Build command
-        cmd = ["whois"]
+        cmd_parts = ["whois"]
         
         # Add options if provided
         if options:
-            option_parts = [opt.strip() for opt in options.split() if opt.strip()]
-            cmd.extend(option_parts)
+            cmd_parts.append(options)
         
         # Add server if provided
         if server:
-            cmd.extend(["-h", server])
+            cmd_parts.extend(["-h", server])
         
         # Add domain
-        cmd.append(cleaned_domain)
+        cmd_parts.append(cleaned_domain)
         
-        response.raw_command = " ".join(cmd)
+        cmd = " ".join(cmd_parts)
         
-        # Execute command
-        result = subprocess.run(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            timeout=timeout
+        # Execute command with real-time output processing
+        return await execute_command(
+            cmd=cmd,
+            response=response,
+            ctx=ctx,
+            timeout=timeout,
+            expected_lines=100
         )
-        
-        response.raw_output = result.stdout if result.stdout else ""
-        response.raw_error = result.stderr if result.stderr else ""
-        response.return_code = result.returncode
-        response.end_process_timer()
-        
-        return response
         
     except Exception as e:
         
