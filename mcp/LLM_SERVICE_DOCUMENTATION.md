@@ -4,7 +4,7 @@
 
 This document provides comprehensive documentation for all services available through the Ocular Agents MCP (Model Context Protocol) server. These services are designed for penetration testing, network discovery, and security auditing tasks.
 
-**Server Name:** `Ocular Agents`  
+**Server Name:** `Ocular Services`  
 **Protocol:** MCP (Model Context Protocol) via FastMCP  
 **Purpose:** Penetration testing and network discovery tools
 
@@ -47,6 +47,7 @@ All services return a standardized `ServiceResponse` object with the following s
 | `count` | integer | No | 5 | 1-99 | Number of ping packets to send |
 | `interval` | float | No | 1.0 | 0.01-5.0 seconds | Interval between packets in seconds |
 | `packet_size` | integer | No | 56 | 1-65524 bytes | Size of data bytes to send |
+| `timeout` | integer | No | 60 | 1+ seconds | Command timeout in seconds |
 | `AsJson` | boolean | No | false | - | Return response as JSON string |
 
 #### Example Usage
@@ -335,12 +336,12 @@ Discovered hosts with NetBIOS names, computer names, domains/workgroups, and ser
 
 | Option | Nmap Flags | Description |
 |--------|------------|-------------|
-| `fast` | `-F -Pn` | Fast scan of top 100 ports |
-| `service` | `-sV --top-ports 20` | Service version detection on top 20 ports |
+| `fast` | `-F -Pn -T4` | Fast scan of top 100 ports with faster timing |
+| `service` | `-sV --top-ports 20 -Pn` | Service version detection on top 20 ports |
 | `stealth` | `-sS -Pn` | Stealth SYN scan without pinging |
-| `rdp` | `-p 3389 --script rdp-*` | RDP vulnerability scan |
-| `aggressive` | `-A -T4` | Aggressive scan with OS detection |
-| `vuln` | `-Pn --script vuln` | CVE vulnerability scanning |
+| `rdp` | `-p 3389 --script rdp-vuln-ms12-020,rdp-enum-encryption -Pn` | RDP vulnerability scan with specific scripts |
+| `aggressive` | `-A -T4 -Pn` | Aggressive scan with OS detection |
+| `vuln` | `-sV --script vuln -Pn` | CVE vulnerability scanning with service detection |
 
 #### Target Formats
 
@@ -471,5 +472,5 @@ if response.return_code != 0 or response.raw_error:
 ## Version Information
 
 - **Documentation Version:** 0.3.2
-- **Last Updated:** February 10, 2026
+- **Last Updated:** February 16, 2026
 - **Compatible MCP Version:** FastMCP

@@ -92,12 +92,12 @@ async def nmap_scan(target: str, scan_type: str = "fast", timeout: int = 240,
         
         # Map scan types to nmap options
         scan_options = {
-            "fast": "-F -Pn",
-            "service": "-sV --top-ports 20",
+            "fast": "-F -Pn -T4",
+            "service": "-sV --top-ports 20 -Pn",
             "stealth": "-sS -Pn",
-            "rdp": "-p 3389 --script rdp-*",
-            "aggressive": "-A -T4",
-            "vuln": "-Pn --script vuln"
+            "rdp": "-p 3389 --script rdp-vuln-ms12-020,rdp-enum-encryption -Pn",
+            "aggressive": "-A -T4 -Pn",
+            "vuln": "-sV --script vuln -Pn"
         }
         
         # Build command
