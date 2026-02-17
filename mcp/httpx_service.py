@@ -4,6 +4,8 @@ import os
 import tempfile
 import shutil
 from service_response import ServiceResponse
+from fastmcp import Context
+from utility import execute_command
 
 # httpx - Fast and multi-purpose HTTP toolkit by ProjectDiscovery
 # Usage: httpx [flags]
@@ -48,7 +50,8 @@ def get_service_info() -> dict:
     }
 
 async def httpx_scan(targets: str, options: str = "basic", ports: str = "80,443,8080,8443", paths: str = "", 
-                     method: str = "GET", timeout: int = 10, threads: int = 50, rate_limit: int = 150, retries: int = 2) -> ServiceResponse:
+                     method: str = "GET", timeout: int = 10, threads: int = 50, rate_limit: int = 150, retries: int = 2,
+                     ctx: Context = None) -> ServiceResponse:
 
 
     # Initialize ServiceResponse
@@ -144,61 +147,55 @@ async def httpx_scan(targets: str, options: str = "basic", ports: str = "80,443,
         
         # Note: httpx will output JSON to stdout when -json flag is used
         
+        # Build command
+        cmd_parts = [httpx_path]
+        
+        # Handle multiple targets
+        targets_file_path = None
+        if ',' in targets:
+            # Create temporary file for target list
+            with tempfile.NamedTemporaryFile(delete=False, mode='w') as targets_file:
+                targets_file.write('\n'.join(targets.split(',')))
+                targets_file_path = targets_file.name
+            cmd_parts.extend(["-list", targets_file_path])
+        else:
+            cmd_parts.extend(["-target", targets])
+        
+        # Add scan options
+        if options_str:
+            cmd_parts.append(options_str)
+        
+        # Add other parameters
+        if ports:
+            cmd_parts.extend(["-ports", ports])
+        
+        if paths:
+            cmd_parts.extend(["-path", paths])
+        
+        cmd_parts.extend(["-method", method])
+        cmd_parts.extend(["-timeout", str(timeout)])
+        cmd_parts.extend(["-threads", str(threads)])
+        cmd_parts.extend(["-rate-limit", str(rate_limit)])
+        cmd_parts.extend(["-retries", str(retries)])
+        
+        # Add output format - JSON to stdout
+        cmd_parts.extend(["-j", "-silent", "-no-color"])
+        
+        cmd = " ".join(cmd_parts)
+        
         try:
-            # Build command
-            cmd = [httpx_path]
-            
-            # Handle multiple targets
-            if ',' in targets:
-                # Create temporary file for target list
-                with tempfile.NamedTemporaryFile(delete=False, mode='w') as targets_file:
-                    targets_file.write('\n'.join(targets.split(',')))
-                    targets_file_path = targets_file.name
-                cmd.extend(["-list", targets_file_path])
-            else:
-                cmd.extend(["-target", targets])
-            
-            # Add scan options
-            if options_str:
-                cmd.extend(options_str.split())
-            
-            # Add other parameters
-            if ports:
-                cmd.extend(["-ports", ports])
-            
-            if paths:
-                cmd.extend(["-path", paths])
-            
-            cmd.extend(["-method", method])
-            cmd.extend(["-timeout", str(timeout)])
-            cmd.extend(["-threads", str(threads)])
-            cmd.extend(["-rate-limit", str(rate_limit)])
-            cmd.extend(["-retries", str(retries)])
-            
-            # Add output format - JSON to stdout
-            cmd.extend(["-j", "-silent", "-no-color"])
-            
-            response.raw_command = " ".join(cmd)
-            
-            # Execute command
-            result = subprocess.run(
-                cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-                timeout=300  # 5 minute max timeout
+            # Execute command with real-time output processing
+            result = await execute_command(
+                cmd=cmd,
+                response=response,
+                ctx=ctx,
+                timeout=300,  # 5 minute max timeout
+                expected_lines=100
             )
-            
-            response.raw_output = result.stdout if result.stdout else ""
-            response.raw_error = result.stderr if result.stderr else ""
-            response.return_code = result.returncode
-            response.end_process_timer()
-            
-            return response
-            
+            return result
         finally:
             # Clean up temporary target file if it was created
-            if 'targets_file_path' in locals() and os.path.exists(targets_file_path):
+            if targets_file_path and os.path.exists(targets_file_path):
                 os.remove(targets_file_path)
         
     except Exception as e:

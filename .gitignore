@@ -28,3 +28,6 @@ reports-*
 
 # Ignore secrets
 secrets.*
+
+#other
+todo.txt

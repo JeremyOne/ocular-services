@@ -1,6 +1,8 @@
 from typing import Optional
 import subprocess
 from service_response import ServiceResponse
+from fastmcp import Context
+from utility import execute_command
 
 # Usage
 #   ping [options] <destination>
@@ -53,30 +55,13 @@ from service_response import ServiceResponse
 #   -N <nodeinfo opt>  use IPv6 node info query, try <help> as argument
 
 
-
-def get_service_info() -> dict:
-    return {
-        "name": "ping",
-        "endpoint": "/ping",
-        "description": "Network connectivity testing using ICMP ping",
-        "methods": ["GET", "POST"],
-        "parameters": {
-            "host": "Target hostname or IP address (required)",
-            "count": "Number of ping packets (1-99, default: 5)",
-            "interval": "Interval between packets (0.01-5.0, default: 1.0)",
-            "packet_size": "Size of data bytes (1-65524, default: 56)"
-        }
-    }
-
-async def ping_host(host: str, count: int = 5, interval: float = 1.0, packet_size: int = 56) -> ServiceResponse:
-    """Ping a host to test network connectivity.
-        host: The hostname or IP address to ping
-        count: Number of ping packets to send (default: 5)
-        Max: 65524
-    Returns:
-        JSON response matching schema.json format
-    """
-
+async def ping_host(host: str, 
+                    count: int = 5, 
+                    interval: float = 1.0, 
+                    packet_size: int = 56,
+                    timeout: int = 60, 
+                    ctx: Context = None) -> ServiceResponse:
+    
     # Initialize ServiceResponse
     response = ServiceResponse(
         service="ping",
@@ -85,12 +70,12 @@ async def ping_host(host: str, count: int = 5, interval: float = 1.0, packet_siz
             "host": host,
             "count": count,
             "interval": interval,
-            "packet_size": packet_size
+            "packet_size": packet_size,
+            "timeout": timeout
         }
     )
     
     try:
-        
         # Validate parameters
         if not host:
             response.add_error("host parameter is required")
@@ -108,39 +93,22 @@ async def ping_host(host: str, count: int = 5, interval: float = 1.0, packet_siz
             response.add_error("packet_size must be between 1 and 65524")
             return response
         
-        # Check if ping is installed
-        try:
-            subprocess.run(["which", "ping"], check=True, capture_output=True)
-        except subprocess.CalledProcessError:
-            response.add_error("ping is not installed on the server")
-            response.return_code = -1
-            response.end_process_timer()
-            return response
-
         # Build command
-        cmd = ["ping", "-c", str(count), "-i", str(interval), "-s", str(packet_size), host]
+        cmds = f"ping -c {str(count)} -i {str(interval)} -s {str(packet_size)} {host}"
+        response.raw_command = cmds
         
-        response.raw_command = " ".join(cmd)
-        
-        # Execute command
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=60
+        # Execute command with real-time output processing
+        return await execute_command(
+            cmd=cmds,
+            response=response,
+            ctx=ctx,
+            timeout=timeout,
+            expected_lines=(count + 10)
         )
-        
-        response.raw_output = result.stdout if result.stdout else ""
-        response.raw_error = result.stderr if result.stderr else ""
-        response.return_code = result.returncode
-        response.end_process_timer()
-        
+    
         return response
         
     except Exception as e:
-        
-        response.raw_error = str(e)
-        response.return_code = None
-        response.end_process_timer()
+        response.add_error(str(e))
         return response
 

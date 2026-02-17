@@ -48,15 +48,13 @@ Compose:
 docker compose up --build
 ```
 
-Quick check:
+Some curl tests:
 ```
 curl http://localhost:8999/health
+
+curl -X POST http://localhost:8999/mcp -H "Content-Type: application/json" -d '{"jsonrpc": "2.0", "id": 2, "method": "tools/list",  params": {}}'
 ```
 
-Run unit tests via HTTP:
-```
-curl http://localhost:8999/test
-```
 
 ## Using the services
 Using the above launch, services will be available on http://localhost:8999/mcp/
@@ -67,11 +65,15 @@ In LM Studio you can add the server to mcp.json:
 {
   "mcpServers": {
     "ocular-services": {
-      "url": "http://localhost:8999/mcp/"
+      "url": "http://localhost:8999/mcp/",
+      "timeout": 60000
     }
   }
 }
 ```
+Notes:
+Timeout is in MS and is on the LM Studio (client side)
+
 
 ## Envionment Setup
 git config --global push.autoSetupRemote true
@@ -134,44 +136,8 @@ sudo apt install ruby-rubygems ruby-dev
 sudo gem install wpscan
 ```
 
-## Testing
-Warning: the unit tests call actual commands and use networking including doing things like resolving dns, and curl on example.com and running nmap on localhost. 
+## Envionment Varables
+These envionment variables can be used to customize some behaviours
 
-Run unit tests:
-```
-python -m pytest tests/
-```
-
-Or run with unittest:
-```
-python tests/run_tests.py
-```
-
-Run specific test file:
-```
-python -m pytest tests/test_service_response.py
-python -m pytest tests/test_ping_service.py -v
-```
-
-The test suite includes:
-- `test_service_response.py` - ServiceResponse class tests
-- `test_ping_service.py` - Ping service validation and execution tests
-- `test_dns_service.py` - DNS lookup tests
-- `test_whois_service.py` - WHOIS service tests
-- `test_curl_service.py` - cURL service tests
-- `test_nmap_service.py` - Nmap service tests
-- `test_httpx_service.py` - HTTPX service tests
-- `test_nbtscan_service.py` - NBTScan service tests
-- `test_nikto_service.py` - Nikto service tests
-- `test_wpscan_service.py` - WPScan service tests
-- `test_dns_service.py` - DNS lookup tests
-- `test_whois_service.py` - WHOIS service tests
-- `test_curl_service.py` - cURL service tests
-- `test_nmap_service.py` - Nmap service tests
-
-All tests verify:
-- Parameter validation
-- Error handling
-- JSON serialization (fixes for datetime objects)
-- Command building
-- Response structure
+MCP_TIMEOUT_SECONDS Default: 600
+Note: This is the server HTTP level timeout, some tools have a seperate timeout

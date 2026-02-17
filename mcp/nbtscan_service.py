@@ -1,6 +1,8 @@
 from typing import Optional
 import subprocess
 from service_response import ServiceResponse
+from fastmcp import Context
+from utility import execute_command
 
 # nbtscan - NetBIOS name scanner version 1.7.2
 # Usage: nbtscan [options] <scan_range>
@@ -36,179 +38,6 @@ def get_service_info() -> dict:
         }
     }
 
-    
-    if not output.strip():
-        result.raw_error = "Empty nbtscan output"
-        return result
-    
-    lines = output.split('\n')
-    domains = set()
-    workgroups = set()
-    
-    for line in lines:
-        line = line.strip()
-        
-        # Skip empty lines, headers, and error messages
-        if not line or line.startswith("Doing NBT name scan") or "IP address" in line:
-            continue
-        
-        # Parse standard nbtscan output format
-        # Format: IP_ADDRESS    NETBIOS_NAME<XX>   SERVICE_TYPE
-        # Example: 192.168.1.1   COMPUTER<00>      UNIQUE
-        standard_match = re.match(r'(\d+\.\d+\.\d+\.\d+)\s+([^\s<]+)<([0-9A-Fa-f]{2})>\s+(.+)', line)
-        if standard_match:
-            ip = standard_match.group(1)
-            name = standard_match.group(2)
-            suffix = standard_match.group(3)
-            service_type = standard_match.group(4).strip()
-            
-            # Check if this is a new host
-            existing_host = None
-            for host in result["discovered_hosts"]:
-                if host["ip_address"] == ip:
-                    existing_host = host
-                    break
-            
-            if not existing_host:
-                existing_host = {
-                    "ip_address": ip,
-                    "netbios_names": [],
-                    "computer_name": None,
-                    "domain": None,
-                    "workgroup": None,
-                    "services": []
-                }
-                result["discovered_hosts"].append(existing_host)
-                result["statistics"]["responsive_hosts"] += 1
-            
-            # Add NetBIOS name entry
-            name_entry = {
-                "name": name,
-                "suffix": suffix,
-                "service_type": service_type,
-                "name_type": get_netbios_name_type(suffix)
-            }
-            existing_host["netbios_names"].append(name_entry)
-            result["statistics"]["total_netbios_names"] += 1
-            
-            # Categorize the name based on suffix
-            if suffix == "00":
-                if service_type.upper() == "UNIQUE":
-                    existing_host["computer_name"] = name
-                    result["netbios_names"]["computers"].append({
-                        "ip": ip,
-                        "name": name,
-                        "suffix": suffix
-                    })
-                elif service_type.upper() == "GROUP":
-                    existing_host["workgroup"] = name
-                    workgroups.add(name)
-            elif suffix == "1C":
-                existing_host["domain"] = name
-                domains.add(name)
-                result["netbios_names"]["domains"].append({
-                    "ip": ip,
-                    "name": name,
-                    "suffix": suffix
-                })
-            elif suffix == "20":
-                result["netbios_names"]["services"].append({
-                    "ip": ip,
-                    "name": name,
-                    "suffix": suffix,
-                    "service": "File Server Service"
-                })
-            elif suffix == "03":
-                result["netbios_names"]["users"].append({
-                    "ip": ip,
-                    "name": name,
-                    "suffix": suffix,
-                    "service": "Messenger Service"
-                })
-            
-            # Add to services list
-            existing_host["services"].append({
-                "name": name,
-                "suffix": suffix,
-                "type": name_entry["name_type"],
-                "service_type": service_type
-            })
-        
-        # Parse verbose output (script-friendly format with separator)
-        # Format: IP:NAME<XX>:SERVICE_TYPE
-        elif ':' in line:
-            parts = line.split(':')
-            if len(parts) >= 3:
-                ip = parts[0].strip()
-                name_part = parts[1].strip()
-                service_type = parts[2].strip()
-                
-                # Extract name and suffix
-                name_match = re.match(r'([^<]+)<([0-9A-Fa-f]{2})>', name_part)
-                if name_match:
-                    name = name_match.group(1)
-                    suffix = name_match.group(2)
-                    
-                    # Similar processing as above
-                    existing_host = None
-                    for host in result["discovered_hosts"]:
-                        if host["ip_address"] == ip:
-                            existing_host = host
-                            break
-                    
-                    if not existing_host:
-                        existing_host = {
-                            "ip_address": ip,
-                            "netbios_names": [],
-                            "computer_name": None,
-                            "domain": None,
-                            "workgroup": None,
-                            "services": []
-                        }
-                        result["discovered_hosts"].append(existing_host)
-                        result["statistics"]["responsive_hosts"] += 1
-                    
-                    name_entry = {
-                        "name": name,
-                        "suffix": suffix,
-                        "service_type": service_type,
-                        "name_type": get_netbios_name_type(suffix)
-                    }
-                    existing_host["netbios_names"].append(name_entry)
-                    result["statistics"]["total_netbios_names"] += 1
-        
-        # Check for errors
-        if any(error_keyword in line.lower() for error_keyword in ['error', 'failed', 'timeout', 'unable']):
-            result["errors"].append(line)
-    
-    # Calculate scan range statistics
-    if target:
-        if '/' in target:
-            # CIDR notation
-            try:
-                import ipaddress
-                network = ipaddress.IPv4Network(target, strict=False)
-                result["statistics"]["total_hosts_scanned"] = network.num_addresses
-            except:
-                result["statistics"]["total_hosts_scanned"] = len(result["discovered_hosts"])
-        elif '-' in target:
-            # Range notation
-            try:
-                base_ip, end_range = target.split('-')
-                start_octet = int(base_ip.split('.')[-1])
-                end_octet = int(end_range)
-                result["statistics"]["total_hosts_scanned"] = end_octet - start_octet + 1
-            except:
-                result["statistics"]["total_hosts_scanned"] = len(result["discovered_hosts"])
-        else:
-            # Single IP
-            result["statistics"]["total_hosts_scanned"] = 1
-    
-    # Update statistics
-    result["statistics"]["unique_domains"] = sorted(list(domains))
-    result["statistics"]["unique_workgroups"] = sorted(list(workgroups))
-    
-    return result
 
 def get_netbios_name_type(suffix: str) -> str:
     """Get the NetBIOS name type description based on suffix"""
@@ -242,7 +71,7 @@ def get_netbios_name_type(suffix: str) -> str:
     return name_types.get(suffix.upper(), f"Unknown Service (0x{suffix})")
 
 async def nbtscan_scan(target: str, options: str = "basic", timeout: int = 1000, verbose: bool = False,
-                       retransmits: int = 0, use_local_port: bool = False) -> ServiceResponse:
+                       retransmits: int = 0, use_local_port: bool = False, ctx: Context = None) -> ServiceResponse:
     
     """Perform NetBIOS name scan using nbtscan.
     
@@ -307,14 +136,6 @@ async def nbtscan_scan(target: str, options: str = "basic", timeout: int = 1000,
             response.add_error("retransmits cannot exceed 10")
             return response
         
-        # Check if nbtscan is installed
-        try:
-            subprocess.run(["which", "nbtscan"], check=True, capture_output=True)
-        except subprocess.CalledProcessError:
-            response.add_error("nbtscan command not found. Please install nbtscan.")
-            response.end_process_timer()
-            return response
-        
         # Map friendly option names to actual nbtscan parameters
         option_mapping = {
             "basic": "",
@@ -331,50 +152,43 @@ async def nbtscan_scan(target: str, options: str = "basic", timeout: int = 1000,
             options_str = options  # Use as-is if not in mapping
         
         # Build command
-        cmd = ["nbtscan"]
+        cmd_parts = ["nbtscan"]
         
         # Add options
         if options_str:
-            cmd.extend(options_str.split())
+            cmd_parts.append(options_str)
         
         # Add verbose flag if specifically requested
-        if verbose and "-v" not in cmd:
-            cmd.append("-v")
+        if verbose and "-v" not in cmd_parts:
+            cmd_parts.append("-v")
         
         # Add timeout
-        cmd.extend(["-t", str(timeout)])
+        cmd_parts.extend(["-t", str(timeout)])
         
         # Add retransmits
         if retransmits > 0:
-            cmd.extend(["-m", str(retransmits)])
+            cmd_parts.extend(["-m", str(retransmits)])
         
         # Add local port option (requires root)
         if use_local_port:
-            cmd.append("-r")
+            cmd_parts.append("-r")
         
         # Suppress banners for cleaner output
-        cmd.append("-q")
+        cmd_parts.append("-q")
         
         # Add target
-        cmd.append(target)
+        cmd_parts.append(target)
         
-        response.raw_command = " ".join(cmd)
+        cmd = " ".join(cmd_parts)
         
-        # Execute command
-        result = subprocess.run(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            timeout=60  # 1 minute max timeout
+        # Execute command with real-time output processing
+        return await execute_command(
+            cmd=cmd,
+            response=response,
+            ctx=ctx,
+            timeout=60,  # 1 minute max timeout
+            expected_lines=100
         )
-        
-        response.raw_output = result.stdout if result.stdout else ""
-        response.raw_error = result.stderr if result.stderr else ""
-        response.return_code = result.returncode
-        response.end_process_timer()
-        
-        return response
         
     except Exception as e:
         

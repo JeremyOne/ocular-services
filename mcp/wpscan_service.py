@@ -3,6 +3,8 @@ import subprocess
 import os
 import tempfile
 from service_response import ServiceResponse
+from fastmcp import Context
+from utility import execute_command
 
 # wpscan - WordPress Security Scanner
 # Usage: wpscan --url URL [options]
@@ -37,7 +39,8 @@ def get_service_info() -> dict:
     }
 
 async def wpscan_scan(url: str, options: str = "basic", api_token: str = "", timeout: int = 300, 
-                      force: bool = False, random_user_agent: bool = False) -> ServiceResponse:
+                      force: bool = False, random_user_agent: bool = False,
+                      ctx: Context = None) -> ServiceResponse:
     """Perform WordPress security scan using WPScan.
     
     Parameters:
@@ -92,15 +95,6 @@ async def wpscan_scan(url: str, options: str = "basic", api_token: str = "", tim
         if timeout > 1800:  # 30 minutes max
             timeout = 1800
         
-        # Check if wpscan is installed
-        try:
-            subprocess.run(["which", "wpscan"], check=True, capture_output=True)
-        except subprocess.CalledProcessError:
-            response.add_error("wpscan is not installed. Please install it with 'gem install wpscan'")
-            response.return_code = -1
-            response.end_process_timer()
-            return response
-        
         # Map friendly option names to actual wpscan parameters
         option_mapping = {
             "basic": "--enumerate p,t,u --plugins-detection mixed",
@@ -118,54 +112,37 @@ async def wpscan_scan(url: str, options: str = "basic", api_token: str = "", tim
         else:
             options_str = options  # Use as-is if not in mapping
         
-        # Create temporary file for JSON output
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.json') as temp_file:
-            output_file = temp_file.name
+        # Build command
+        cmd_parts = ["wpscan", "--url", url]
         
-        try:
-            # Build command
-            cmd = ["wpscan", "--url", url]
-            
-            # Add scan options
-            if options_str:
-                cmd.extend(options_str.split())
-            
-            # Add API token if provided
-            if api_token:
-                cmd.extend(["--api-token", api_token])
-            
-            # Add additional flags
-            if force:
-                cmd.append("--force")
-            
-            if random_user_agent:
-                cmd.append("--random-user-agent")
-            
-            # Add output format and file
-            cmd.extend(["--format", "json", "--output", output_file, "--no-banner"])
-            
-            response.raw_command = " ".join(cmd)
-            
-            # Execute command
-            result = subprocess.run(
-                cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-                timeout=timeout
-            )
-            
-            response.raw_output = result.stdout if result.stdout else ""
-            response.raw_error = result.stderr if result.stderr else ""
-            response.return_code = result.returncode
-            response.end_process_timer()
-            
-            return response
-            
-        finally:
-            # Clean up temporary file
-            if os.path.exists(output_file):
-                os.remove(output_file)
+        # Add scan options
+        if options_str:
+            cmd_parts.append(options_str)
+        
+        # Add API token if provided
+        if api_token:
+            cmd_parts.extend(["--api-token", api_token])
+        
+        # Add additional flags
+        if force:
+            cmd_parts.append("--force")
+        
+        if random_user_agent:
+            cmd_parts.append("--random-user-agent")
+        
+        # Add no-banner flag
+        cmd_parts.append("--no-banner")
+        
+        cmd = " ".join(cmd_parts)
+        
+        # Execute command with real-time output processing
+        return await execute_command(
+            cmd=cmd,
+            response=response,
+            ctx=ctx,
+            timeout=timeout,
+            expected_lines=200
+        )
         
     except Exception as e:
         

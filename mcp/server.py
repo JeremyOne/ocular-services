@@ -10,11 +10,12 @@ import unittest
 import sys
 import os
 import io
-from fastmcp import FastMCP
+
+from fastmcp import Context, FastMCP
+from docket import Timeout
 from fastmcp.client.logging import LogMessage
 from starlette.requests import Request
 from starlette.responses import PlainTextResponse, JSONResponse
-
 
 import ping_service as ping_service_module
 import curl_service as curl_service_module  
@@ -28,7 +29,7 @@ import nmap_service as nmap_service_module
 import nikto_service as nikto_service_module
 
 from ping_service import ping_host
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from curl_service import curl_request
 from dns_service import dns_lookup
 ##from enum4linux_service import enum4linux_scan
@@ -62,11 +63,19 @@ mcp = FastMCP(
 
 # Ping Service Endpoint
 @mcp.tool(
+        task=True,
         name="ping",
         description="Network connectivity testing using ICMP ping."
     )
-async def ping_service(host: str, count: int = 5, interval: float = 1.0, packet_size: int = 56, AsJson: bool = False) -> str:
-    result = await ping_host(host, count, interval, packet_size)
+async def ping_service(host: str, 
+                       count: int = 5, 
+                       interval: float = 1.0, 
+                       packet_size: int = 56, 
+                       AsJson: bool = False, 
+                       timeout: int = 60,
+                       ctx: Context = None) -> str:
+    
+    result = await ping_host(host, count, interval, packet_size, timeout, ctx)
     
     if AsJson:
         return json.dumps(result.to_dict())
@@ -77,7 +86,7 @@ async def ping_service(host: str, count: int = 5, interval: float = 1.0, packet_
         name="time",
         description="Get the current date and time from the server."
     )
-async def time_service(InUTC: bool, AsJson: bool) -> str:
+async def time_service(InUTC: bool = False, AsJson: bool = False) -> str:
     if AsJson:
         if InUTC:
             return json.dumps({"datetime": datetime.now(timezone.utc).isoformat()})

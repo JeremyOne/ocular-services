@@ -1,6 +1,8 @@
 from typing import Optional
 import subprocess
 from service_response import ServiceResponse
+from fastmcp import Context
+from utility import execute_command
 
 # nmap - Network Mapper version 7.94SVN
 # Network exploration tool and security / port scanner
@@ -31,7 +33,7 @@ def get_service_info() -> dict:
 
 
 async def nmap_scan(target: str, scan_type: str = "fast", timeout: int = 240, 
-                    ports: str = "", scripts: str = "") -> ServiceResponse:
+                    ports: str = "", scripts: str = "", ctx: Context = None) -> ServiceResponse:
     """Perform network scan using nmap.
     
     Parameters:
@@ -88,65 +90,47 @@ async def nmap_scan(target: str, scan_type: str = "fast", timeout: int = 240,
             response.add_error("timeout cannot exceed 1800 seconds")
             return response
         
-        # Check if nmap is installed
-        try:
-            subprocess.run(["which", "nmap"], check=True, capture_output=True)
-        except subprocess.CalledProcessError:
-            response.add_error("nmap is not installed. Please install it with 'sudo apt-get install nmap'")
-            response.return_code = -1
-            response.end_process_timer()
-            return response
-        
         # Map scan types to nmap options
         scan_options = {
-            "fast": ["-F", "-Pn"],
-            "service": ["-sV", "--top-ports", "20"],
-            "stealth": ["-sS", "-Pn"],
-            "rdp": ["-p", "3389", "--script", "rdp-*"],
-            "aggressive": ["-A", "-T4"],
-            "vuln": ["-Pn", "--script", "vuln"]
+            "fast": "-F -Pn -T4",
+            "service": "-sV --top-ports 20 -Pn",
+            "stealth": "-sS -Pn",
+            "rdp": "-p 3389 --script rdp-vuln-ms12-020,rdp-enum-encryption -Pn",
+            "aggressive": "-A -T4 -Pn",
+            "vuln": "-sV --script vuln -Pn"
         }
         
         # Build command
-        cmd = ["nmap"]
+        cmd_parts = ["nmap"]
         
         # Add scan type options
         if scan_type in scan_options:
-            cmd.extend(scan_options[scan_type])
+            cmd_parts.append(scan_options[scan_type])
         else:
             # Use custom scan_type as nmap options
-            cmd.extend(scan_type.split())
+            cmd_parts.append(scan_type)
         
         # Add custom ports if specified
         if ports:
-            # Remove any existing port specifications and add custom ones
-            cmd = [arg for arg in cmd if not arg.startswith("-p") and not arg.startswith("--top-ports")]
-            cmd.extend(["-p", ports])
+            cmd_parts.append(f"-p {ports}")
         
         # Add custom scripts if specified
         if scripts:
-            cmd.extend(["--script", scripts])
+            cmd_parts.append(f"--script {scripts}")
         
         # Add target(s)
-        cmd.extend(target.split())
+        cmd_parts.append(target)
         
-        response.raw_command = " ".join(cmd)
+        cmd = " ".join(cmd_parts)
         
-        # Execute command
-        result = subprocess.run(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            timeout=timeout
+        # Execute command with real-time output processing
+        return await execute_command(
+            cmd=cmd,
+            response=response,
+            ctx=ctx,
+            timeout=timeout,
+            expected_lines=100
         )
-        
-        response.raw_output = result.stdout if result.stdout else ""
-        response.raw_error = result.stderr if result.stderr else ""
-        response.return_code = result.returncode
-        response.end_process_timer()
-        
-        return response
         
     except Exception as e:
         

@@ -25,7 +25,7 @@ class TestPingService(unittest.TestCase):
     
     def test_ping_missing_host(self):
         """Test ping with missing host parameter"""
-        response = self.loop.run_until_complete(ping_host("", 5, 1.0, 56))
+        response = self.loop.run_until_complete(ping_host("", 5, 1.0, 56, 60))
         
         self.assertIsInstance(response, ServiceResponse)
         self.assertEqual(response.service, "ping")
@@ -34,31 +34,31 @@ class TestPingService(unittest.TestCase):
     
     def test_ping_invalid_count(self):
         """Test ping with invalid count parameter"""
-        response = self.loop.run_until_complete(ping_host("localhost", 0, 1.0, 56))
+        response = self.loop.run_until_complete(ping_host("localhost", 0, 1.0, 56, 60))
         
         self.assertIn("count must be between 1 and 99", response.raw_error)
         self.assertTrue(response.has_errors())
         
-        response = self.loop.run_until_complete(ping_host("localhost", 100, 1.0, 56))
+        response = self.loop.run_until_complete(ping_host("localhost", 100, 1.0, 56, 60))
         self.assertIn("count must be between 1 and 99", response.raw_error)
     
     def test_ping_invalid_interval(self):
         """Test ping with invalid interval parameter"""
-        response = self.loop.run_until_complete(ping_host("localhost", 5, 0.001, 56))
+        response = self.loop.run_until_complete(ping_host("localhost", 5, 0.001, 56, 60))
         
         self.assertIn("interval must be between 0.01 and 5", response.raw_error)
         self.assertTrue(response.has_errors())
     
     def test_ping_invalid_packet_size(self):
         """Test ping with invalid packet_size parameter"""
-        response = self.loop.run_until_complete(ping_host("localhost", 5, 1.0, 0))
+        response = self.loop.run_until_complete(ping_host("localhost", 5, 1.0, 0, 60))
         
         self.assertIn("packet_size must be between 1 and 65524", response.raw_error)
         self.assertTrue(response.has_errors())
     
     def test_ping_localhost(self):
         """Test ping to localhost (should succeed)"""
-        response = self.loop.run_until_complete(ping_host("localhost", 2, 1.0, 56))
+        response = self.loop.run_until_complete(ping_host("localhost", 2, 1.0, 56, 60))
         
         self.assertIsInstance(response, ServiceResponse)
         self.assertEqual(response.service, "ping")
@@ -72,7 +72,7 @@ class TestPingService(unittest.TestCase):
         """Test that ping response can be converted to JSON"""
         import json
         
-        response = self.loop.run_until_complete(ping_host("localhost", 1, 1.0, 56))
+        response = self.loop.run_until_complete(ping_host("localhost", 1, 1.0, 56, 60))
         
         # This should not raise an exception
         try:

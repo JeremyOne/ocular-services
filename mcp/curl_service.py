@@ -1,6 +1,8 @@
 from typing import Optional
 import subprocess
 from service_response import ServiceResponse
+from fastmcp import Context
+from utility import execute_command
 
 # Usage
 #   curl [options] <URL>
@@ -42,7 +44,8 @@ def get_service_info() -> dict:
 
 async def curl_request(url: str, method: str = "GET", headers: str = "", data: str = "", 
                        follow_redirects: bool = False, verbose: bool = False, insecure: bool = False, 
-                       user_agent: str = "", headers_only: bool = False) -> ServiceResponse:
+                       user_agent: str = "", headers_only: bool = False, timeout: int = 30,
+                       ctx: Context = None) -> ServiceResponse:
     
     """Make HTTP requests using curl for penetration testing and discovery.
         url: The target URL to request
@@ -70,7 +73,8 @@ async def curl_request(url: str, method: str = "GET", headers: str = "", data: s
             "verbose": verbose,
             "insecure": insecure,
             "user_agent": user_agent,
-            "headers_only": headers_only
+            "headers_only": headers_only,
+            "timeout": timeout
         }
     )
         
@@ -81,65 +85,50 @@ async def curl_request(url: str, method: str = "GET", headers: str = "", data: s
             response.add_error("url parameter is required")
             return response
         
-        # Check if curl is installed
-        try:
-            subprocess.run(["which", "curl"], check=True, capture_output=True)
-        except subprocess.CalledProcessError:
-            response.add_error("curl is not installed on the server")
-            response.return_code = -1
-            response.end_process_timer()
-            return response
-        
         # Build command
-        cmd = ["curl"]
+        cmd_parts = ["curl"]
         
         # Add options based on parameters
         if headers_only:
-            cmd.append("-I")  # Headers only
+            cmd_parts.append("-I")  # Headers only
         if follow_redirects:
-            cmd.append("-L")  # Follow redirects
+            cmd_parts.append("-L")  # Follow redirects
         if verbose:
-            cmd.append("-v")  # Verbose output
+            cmd_parts.append("-v")  # Verbose output
         if insecure:
-            cmd.append("-k")  # Allow insecure connections
+            cmd_parts.append("-k")  # Allow insecure connections
         
         # Set HTTP method
         if method != "GET":
-            cmd.extend(["-X", method])
+            cmd_parts.extend(["-X", method])
         
         # Add custom headers
         if headers:
             for header in headers.split(';'):
                 if header.strip():
-                    cmd.extend(["-H", header.strip()])
+                    cmd_parts.extend(["-H", header.strip()])
         
         # Add User-Agent if specified
         if user_agent:
-            cmd.extend(["-H", f"User-Agent: {user_agent}"])
+            cmd_parts.extend(["-H", f"User-Agent: {user_agent}"])
         
         # Add POST data
         if data and method.upper() in ["POST", "PUT", "PATCH"]:
-            cmd.extend(["-d", data])
+            cmd_parts.extend(["-d", data])
         
         # Add URL
-        cmd.append(url)
+        cmd_parts.append(url)
         
-        response.raw_command = " ".join(cmd)
+        cmd = " ".join(cmd_parts)
         
-        # Execute curl command
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=30
+        # Execute command with real-time output processing
+        return await execute_command(
+            cmd=cmd,
+            response=response,
+            ctx=ctx,
+            timeout=timeout,
+            expected_lines=50
         )
-        
-        response.raw_output = result.stdout if result.stdout else ""
-        response.raw_error = result.stderr if result.stderr else ""
-        response.return_code = result.returncode
-        response.end_process_timer()
-        
-        return response
         
     except Exception as e:
         
