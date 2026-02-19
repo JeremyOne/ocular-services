@@ -11,8 +11,8 @@ Update version across all project files:
 ```
 
 This updates:
-- `mcp/LLM_SERVICE_DOCUMENTATION.md` - Documentation version and date
-- `mcp/llm_service_schema.json` - Schema version and last_updated
+- `mcp/LLM_SERVICE_DOCUMENTATION.md` - Documentation version
+- `mcp/llm_service_schema.json` - Schema version
 - `mcp/server.py` - FastMCP server version
 - `VERSION` - Version file
 
@@ -52,7 +52,7 @@ Some curl tests:
 ```
 curl http://localhost:8999/health
 
-curl -X POST http://localhost:8999/mcp -H "Content-Type: application/json" -d '{"jsonrpc": "2.0", "id": 2, "method": "tools/list",  params": {}}'
+curl -X POST http://localhost:8999/mcp -H "Content-Type: application/json" -d '{"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}}'
 ```
 
 
@@ -75,7 +75,7 @@ Notes:
 Timeout is in MS and is on the LM Studio (client side)
 
 
-## Envionment Setup
+## Environment Setup
 git config --global push.autoSetupRemote true
 
 
@@ -105,10 +105,9 @@ pip install --upgrade -r requirements.txt
 
 These are not required to run the server, but individual tools return an error if the command is unavailable.
 
-### APT/SNAP installs
+### APT installs
 ```
-sudo apt install nmap smbclient nikto masscan whois nbtscan
-sudo snap install enum4linux
+sudo apt install nmap smbclient nikto whois nbtscan
 ```
 
 ### HTTPX
@@ -136,8 +135,5 @@ sudo apt install ruby-rubygems ruby-dev
 sudo gem install wpscan
 ```
 
-## Envionment Varables
-These envionment variables can be used to customize some behaviours
-
-MCP_TIMEOUT_SECONDS Default: 600
-Note: This is the server HTTP level timeout, some tools have a seperate timeout
+## Environment Variables
+No environment variables are currently required or supported by the server.
