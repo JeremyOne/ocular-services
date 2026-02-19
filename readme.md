@@ -1,7 +1,7 @@
 # Ocular-services
 A set of MCP services focusted on network and security scanning
 
-run mcp/allservices.py to start all services.
+
 
 ## Docker
 
@@ -28,7 +28,7 @@ docker compose up --build
 Quick check:
 ```
 curl http://localhost:8999/health
-curl http://localhost:8999/services
+
 ```
 
 ## Using the services
@@ -46,7 +46,7 @@ In LM Studio you can add the server to mcp.json:
 }
 ```
 
-## Envionment Setup
+## Environment Setup
 git config --global push.autoSetupRemote true
 
 
@@ -76,18 +76,7 @@ pip install --upgrade -r requirements.txt
 ### MCP
 pip install uv fastmcp 
 
-uv venv
-source .venv/bin/activate
-uv pip install fastmcp
 
-### Simple installs
-sudo apt install nmap
-sudo apt install smbclient
-sudo apt install nikto
-sudo apt install masscan
-sudo apt install whois
-sudo apt install nbtscan
-sudo snap install enum4linux
 
 ### HTTPX
 #### Install Go if not already installed
@@ -105,3 +94,4 @@ go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest
 ### wpscan
 sudo apt install ruby-rubygems ruby-dev
 sudo gem install wpscan
+
